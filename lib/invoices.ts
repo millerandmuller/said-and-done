@@ -71,6 +71,13 @@ export async function generateQr(invoice_id: string): Promise<string | undefined
   return parseQrPayload(typeof raw === "string" ? raw.replace(/^PayPal toolkit tool generate_invoice_qr_code failed: /, "") : raw);
 }
 
+// The amount PayPal holds on the invoice: the only figure a cash payment may be recorded against.
+export async function getInvoiceAmount(invoice_id: string): Promise<{ total: number; currency: string }> {
+  const inv = await callTool<{ amount?: { value: string; currency_code: string }; detail?: { currency_code?: string } }>("get_invoice", { invoice_id });
+  if (!inv.amount) throw new Error("PayPal returned no amount for that invoice.");
+  return { total: Number(inv.amount.value), currency: inv.amount.currency_code ?? inv.detail?.currency_code ?? "USD" };
+}
+
 export async function getInvoiceStatus(invoice_id: string): Promise<InvoiceStatus> {
   const inv = await callTool<{ status: InvoiceStatus }>("get_invoice", { invoice_id });
   return inv.status;

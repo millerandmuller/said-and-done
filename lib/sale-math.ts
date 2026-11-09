@@ -10,6 +10,24 @@ export type DraftLine = {
   custom_price?: number | null; // seller said "the chipped one for six" (USD, per unit)
 };
 
+export const MAX_QTY = 99;
+export const MAX_UNIT_PRICE = 1000;
+export const MAX_SALE_TOTAL = 5000;
+export const ALLOWED_CURRENCIES = ["USD", "EUR"];
+
+// Guard for anything that reaches PayPal. The browser is not trusted: lines must be positive, bounded, and the total is recomputed.
+export function validateSale(sale: Sale): string | null {
+  if (!sale || !Array.isArray(sale.items) || sale.items.length === 0) return "There is nothing to invoice.";
+  if (!ALLOWED_CURRENCIES.includes(sale.currency)) return `Currency ${sale.currency} is not supported.`;
+  for (const i of sale.items) {
+    if (!Number.isInteger(i.qty) || i.qty < 1 || i.qty > MAX_QTY) return `Quantity for ${i.name} must be between 1 and ${MAX_QTY}.`;
+    if (!Number.isFinite(i.unit_price) || i.unit_price <= 0 || i.unit_price > MAX_UNIT_PRICE) return `Price for ${i.name} is out of range.`;
+    if (typeof i.name !== "string" || !i.name.trim() || i.name.length > 100) return "An item name is missing or too long.";
+  }
+  if (totalOf(sale.items) > MAX_SALE_TOTAL) return "That total is too large for the counter.";
+  return null;
+}
+
 export const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export type PricedResult = { items: SaleItem[]; unknown: DraftLine[] };
@@ -19,13 +37,14 @@ export function priceLines(lines: DraftLine[], catalog: CatalogItem[], fx: numbe
   const items: SaleItem[] = [];
   const unknown: DraftLine[] = [];
   for (const line of lines) {
-    const qty = Math.max(1, Math.round(line.qty || 1));
+    const qty = Math.min(MAX_QTY, Math.max(1, Math.round(line.qty || 1)));
+    const custom = line.custom_price != null && line.custom_price > 0 ? Math.min(line.custom_price, MAX_UNIT_PRICE) : null; // zero or negative prices are never honoured
     const item = line.sku ? bySku.get(line.sku) : undefined;
     if (item) {
-      const base = line.custom_price != null ? line.custom_price : item.price;
+      const base = custom ?? item.price;
       items.push({ sku: item.sku, name: item.name, qty, unit_price: round2(base * fx), spoken: item.spoken });
-    } else if (line.custom_price != null && line.name) {
-      items.push({ sku: `custom-${slug(line.name)}`, name: capitalise(line.name), qty, unit_price: round2(line.custom_price * fx) });
+    } else if (custom !== null && line.name) {
+      items.push({ sku: `custom-${slug(line.name)}`, name: capitalise(line.name), qty, unit_price: round2(custom * fx) });
     } else {
       unknown.push(line);
     }

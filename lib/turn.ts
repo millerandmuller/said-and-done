@@ -75,7 +75,8 @@ function saleTurn(u: U, draft: Draft | null, catalog: CatalogItem[], defaultCurr
 }
 
 async function catalogTurn(newItem: U["new_item"]): Promise<TurnResult> {
-  if (!newItem) return { kind: "unknown", speak: "I didn't catch the price." };
+  const ok = newItem && Number.isFinite(newItem.price) && newItem.price > 0 && newItem.price <= 500 && newItem.name.trim().length > 0 && newItem.name.length <= 60;
+  if (!newItem || !ok) return { kind: "unknown", speak: "I didn't catch the price." };
   const item = await addCatalogItem(newItem);
   return { kind: "catalog_added", item, speak: `Added ${item.name.toLowerCase()}, ${spokenAmount(item.price, "USD")}. ${item.aliases[0] ? `Say '${item.aliases[0]}' to sell it.` : ""}`.trim() };
 }
@@ -93,7 +94,7 @@ async function planTurn(tz: string, fx: number): Promise<TurnResult> {
   const now = new Date().toISOString();
   const today = summarizeDay(rows, dayKey(now, tz), tz, fx);
   const last = summarizeDay(rows, lastSaturdayKey(now, tz), tz, fx);
-  return { kind: "plan", speak: spokenPlan(planNextWeek(today, last, (n) => labelByName.get(n) ?? n.toLowerCase())) };
+  return { kind: "plan", speak: spokenPlan(planNextWeek(today, last, (n) => labelByName.get(n) ?? n.toLowerCase()), last.curatedCount > 0) };
 }
 
 async function reminderTurn(): Promise<TurnResult> {

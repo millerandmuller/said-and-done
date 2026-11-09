@@ -1,7 +1,9 @@
 // What happens after the seller says "yes": invoice, share link, QR, or the cash / pay-later variants.
 // Returns a timed trace of the PayPal Agent Toolkit calls; the Proof beat shows it on screen.
 import { createInvoiceDraft, generateQr, recordExternalPayment, shareInvoice } from "./invoices";
+import { once } from "./idempotency";
 import { invalidateLedger } from "./ledger";
+import { totalOf, validateSale } from "./sale-math";
 import type { InvoiceStatus, Sale } from "./types";
 
 export type TraceStep = { tool: string; ms: number };
@@ -24,8 +26,15 @@ async function timed<T>(trace: TraceStep[], tool: string, work: () => Promise<T>
   return value;
 }
 
-export async function startCheckout(sale: Sale): Promise<CheckoutResult> {
-  if (!sale.items.length) throw new Error("There is nothing to invoice.");
+// The browser's total is ignored: it is recomputed here from validated lines, so a crafted request cannot change what is billed or shown.
+export function startCheckout(clientSale: Sale, saleKey?: string): Promise<CheckoutResult> {
+  const problem = validateSale(clientSale);
+  if (problem) return Promise.reject(new Error(problem));
+  const sale: Sale = { ...clientSale, total: totalOf(clientSale.items) };
+  return once(saleKey, () => runCheckout(sale));
+}
+
+async function runCheckout(sale: Sale): Promise<CheckoutResult> {
   const trace: TraceStep[] = [];
   const invoice_id = await timed(trace, "create_invoice", () => createInvoiceDraft(sale));
   const payer_url = await timed(trace, "send_invoice", () => shareInvoice(invoice_id, sale));

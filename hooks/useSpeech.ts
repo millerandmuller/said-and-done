@@ -66,7 +66,10 @@ export function useSpeech(handlers: Handlers) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "en-US";
     u.rate = 1.05;
-    const done = () => { speakingRef.current = false; resolve(); setTimeout(begin, 150); };
+    let finished = false;
+    const done = () => { if (finished) return; finished = true; clearTimeout(watchdog); speakingRef.current = false; resolve(); setTimeout(begin, 150); };
+    // Chrome sometimes never fires onend; without this the microphone would stay off for the rest of the day.
+    const watchdog = setTimeout(done, Math.max(4000, text.length * 120));
     u.onend = done;
     u.onerror = done;
     window.speechSynthesis.speak(u);

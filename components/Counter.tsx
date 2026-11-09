@@ -17,7 +17,7 @@ const POLL_MS = 3000;
 const TERMINAL_MS = { paid: 3500, cash: 2500, later: 3200 } as const;
 
 async function post<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) }); // a hung request must not freeze the counter
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? res.statusText);
   return json as T;
@@ -33,6 +33,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
   const pendingPrice = useRef<{ original: string; name: string } | null>(null); // "I don't know 'the blue one'. What does it cost?"
   const heardRef = useRef<(text: string) => void>(() => {});
   const rejectTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // a bare "no" waits briefly for "...three"
+  const saleKey = useRef<{ sig: string; id: string } | null>(null); // same sale, same key: a retry never makes a second invoice
   const busyRef = useRef(false); // one turn at a time: a second sentence while thinking is ignored
 
   const speech = useSpeech({
@@ -78,7 +79,10 @@ export function Counter({ sellerName }: { sellerName: string }) {
     busyRef.current = true;
     dispatch({ type: "creating" });
     try {
-      const r = await post<CheckoutResult>("/api/invoice", { sale });
+      const sig = JSON.stringify(sale);
+      if (saleKey.current?.sig !== sig) saleKey.current = { sig, id: crypto.randomUUID() };
+      const r = await post<CheckoutResult>("/api/invoice", { sale, saleKey: saleKey.current.id });
+      saleKey.current = null;
       if (r.mode === "cash") {
         dispatch({ type: "cash", total: sale.total, currency: sale.currency });
         void speakRef.current("Cash. Noted.");
@@ -131,7 +135,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
     const cmd = classify(text);
     if (phase === "awaiting_payment") {
       if (cmd === "cash") void recordCash();
-      else if (cmd === "never_mind" || cmd === "no") void cancelInvoice();
+      else if (cmd === "never_mind") void cancelInvoice(); // a bare "no" is ignored here: a buyer saying "no" must not kill a live QR
       else if (cmd === "later") keepForLater();
       return;
     }

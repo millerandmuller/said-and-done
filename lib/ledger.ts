@@ -29,7 +29,8 @@ export function rowFromInvoice(id: string, inv: RawInvoice): LedgerRow | null {
   const recipient = inv.primary_recipients?.[0]?.billing_info;
   return {
     invoice_id: id,
-    time: payment?.payment_date ? normaliseDate(payment.payment_date) : (inv.detail?.metadata?.create_time ?? new Date().toISOString()),
+    // Curated history is dated by its recorded payment date; live sales keep PayPal's real creation time.
+    time: reference.startsWith("SD:seed") && payment?.payment_date ? normaliseDate(payment.payment_date) : (inv.detail?.metadata?.create_time ?? new Date().toISOString()),
     items: (inv.items ?? []).map((i) => ({ name: i.name, qty: Number(i.quantity), unit_price: Number(i.unit_amount.value) })),
     total: Number(inv.amount?.value ?? 0),
     currency: inv.detail?.currency_code ?? inv.amount?.currency_code ?? "USD",

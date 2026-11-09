@@ -29,6 +29,7 @@ export type DaySummary = {
   cashTotal: number;
   paypalTotal: number;
   topItem?: { name: string; qty: number };
+  curatedCount: number; // seeded history rows included in this day
   itemQty: Map<string, number>;
 };
 
@@ -45,6 +46,7 @@ export function summarizeDay(rows: LedgerRow[], key: string, tz: string, fx: num
   const top = [...itemQty.entries()].sort((a, b) => b[1] - a[1])[0];
   return {
     count: day.length,
+    curatedCount: day.filter((r) => r.curated).length,
     total: round0(total),
     cashCount,
     cashTotal: round0(cashTotal),
@@ -61,10 +63,14 @@ export function spokenSummary(s: DaySummary, shortOf: (name: string) => string =
   if (s.count === 0) return "Nothing sold yet. The honey is still here.";
   const sales = s.count === 1 ? "1 sale" : `${s.count} sales`;
   const top = s.topItem ? ` ${shortOf(s.topItem.name)} carried the day.` : "";
-  return `Today: ${sales}, ${spokenAmount(s.total, "USD")}, ${s.cashCount} in cash.${top}`;
+  // Honesty line: seeded history is never presented as live sales.
+  const curated = s.curatedCount ? ` ${sentenceCase(numberToWords(s.curatedCount))} of those ${s.curatedCount === 1 ? "is" : "are"} curated history.` : "";
+  return `Today: ${sales}, ${spokenAmount(s.total, "USD")}, ${s.cashCount} in cash.${top}${curated}`;
 }
 
 // Anyone with an open, unpaid invoice owes: a pay-later sale, or a QR the buyer walked away from.
+const sentenceCase = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 export function owing(rows: LedgerRow[]): LedgerRow[] {
   return rows.filter((r) => OWING_STATES.includes(r.status));
 }
@@ -84,9 +90,9 @@ export function planNextWeek(today: DaySummary, lastSaturday: DaySummary, label:
   return out.slice(0, 2);
 }
 
-export function spokenPlan(suggestions: Suggestion[]): string {
+export function spokenPlan(suggestions: Suggestion[], lastSaturdayIsCurated = false): string {
   if (!suggestions.length) return "Not enough history yet to compare. Ask me again after next Saturday.";
-  return suggestions.map((s) => s.text).join(" ");
+  return suggestions.map((s) => s.text).join(" ") + (lastSaturdayIsCurated ? " Last Saturday is curated history." : "");
 }
 
 export { numberToWords };
