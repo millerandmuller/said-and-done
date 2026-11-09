@@ -104,9 +104,11 @@ export function Counter({ sellerName }: { sellerName: string }) {
     }
   }, [reply]);
 
+  const settling = useRef(false); // one cash/cancel request at a time: a double "never mind" must not race itself
   const recordCash = useCallback(async () => {
     const a = stateRef.current.awaiting;
-    if (!a) return;
+    if (!a || settling.current) return;
+    settling.current = true;
     try {
       const r = await post<{ status: string }>(`/api/invoice/${a.invoice_id}`, { action: "cash" });
       // PayPal's answer decides the screen: if the buyer paid a moment earlier, the status poll flips to PAID instead of Cash.
@@ -115,18 +117,23 @@ export function Counter({ sellerName }: { sellerName: string }) {
       void speakRef.current("Cash. Noted.");
     } catch {
       reply("I couldn't record the cash. Try again.");
+    } finally {
+      settling.current = false;
     }
   }, [reply]);
 
   const cancelInvoice = useCallback(async () => {
     const a = stateRef.current.awaiting;
-    if (!a) return;
+    if (!a || settling.current) return;
+    settling.current = true;
     try {
       const r = await post<{ status: string }>(`/api/invoice/${a.invoice_id}`, { action: "cancel" });
       if (r.status === "CANCELLED") dispatch({ type: "reject" }); // a refused cancel (already paid) stays on screen; the poll shows PAID
     } catch (e) {
       console.error("cancel failed", e);
       reply("I couldn't cancel that. The QR stays up.");
+    } finally {
+      settling.current = false;
     }
   }, [reply]);
 
@@ -150,6 +157,8 @@ export function Counter({ sellerName }: { sellerName: string }) {
     }
     if (phase === "confirming") {
       if (rejectTimer.current) { clearTimeout(rejectTimer.current); rejectTimer.current = null; }
+      // While the counter waits for a price ("What does it cost?"), a bare number is the price, not a quantity.
+      if (pendingPrice.current) { if (cmd === "never_mind") pendingPrice.current = null; else return void runTurn(text); }
       const qty = parseQuantity(text);
       const focus = stateRef.current.focusSku;
       if (qty !== null && focus) return adjustTo(focus, qty); // "no, three": deterministic, no model round trip
@@ -253,7 +262,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
       <header className="topbar"><b>{sellerName}</b><span className="sandbox">PayPal sandbox</span></header>
 
       {phase === "awaiting_payment" && state.awaiting && (
-        <QrScreen awaiting={state.awaiting} offline={offline} onCash={recordCash} onLater={keepForLater} onCancel={cancelInvoice} />
+        <QrScreen awaiting={state.awaiting} offline={offline} notice={state.message} onCash={recordCash} onLater={keepForLater} onCancel={cancelInvoice} />
       )}
       {phase === "paid" && state.lastPaid && <PaidScreen {...state.lastPaid} proof={state.lastTrace} />}
       {phase === "cash" && state.lastPaid && <CashScreen {...state.lastPaid} />}

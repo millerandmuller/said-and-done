@@ -32,4 +32,20 @@ describe("interpretTurn: chatter is ignored silently", () => {
     const r = await interpretTurn("two honey", null);
     expect(r.kind).toBe("sale");
   });
+
+  it("drops a half-heard email (no TLD) instead of carrying it to PayPal", async () => {
+    understand.mockResolvedValue({ intent: "sale", items: [{ sku: "honey-500", name: "honey", qty: 1 }], payment_mode: "paypal_later", currency: null, payer_email: "anna@example", payer_name: "Anna" });
+    const r = await interpretTurn("one honey, she pays later, anna at example", null);
+    expect(r.kind === "sale" && r.sale.payer_email).toBeUndefined();
+    understand.mockResolvedValue({ intent: "sale", items: [{ sku: "honey-500", name: "honey", qty: 1 }], payment_mode: "paypal_later", currency: null, payer_email: "anna@example.com", payer_name: "Anna" });
+    const ok = await interpretTurn("one honey, she pays later, anna at example dot com", null);
+    expect(ok.kind === "sale" && ok.sale.payer_email).toBe("anna@example.com");
+  });
+
+  it("refuses a catalog price that is not whole cents", async () => {
+    understand.mockResolvedValue({ intent: "add_catalog_item", items: [], new_item: { name: "Soap", price: 0.004, aliases: [] }, payment_mode: null, currency: null });
+    expect((await interpretTurn("I sell soap for a tenth of a cent", null)).kind).toBe("unknown");
+    understand.mockResolvedValue({ intent: "add_catalog_item", items: [], new_item: { name: "Soap", price: 0.333, aliases: [] }, payment_mode: null, currency: null });
+    expect((await interpretTurn("I sell soap", null)).kind).toBe("unknown");
+  });
 });

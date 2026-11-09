@@ -5,7 +5,7 @@ import { getConfig } from "./config";
 import { dayKey, lastSaturdayKey, owing, planNextWeek, spokenPlan, spokenSummary, summarizeDay } from "./day";
 import { sendReminder } from "./invoices";
 import { fetchLedger } from "./ledger";
-import { buildSale, confirmationSentence, numberToWords, priceLines, spokenAmount, type DraftLine } from "./sale-math";
+import { buildSale, confirmationSentence, isValidEmail, numberToWords, priceLines, spokenAmount, type DraftLine } from "./sale-math";
 import { understand } from "./understand";
 import type { CatalogItem, PaymentMode, Sale, SaleItem } from "./types";
 
@@ -63,7 +63,7 @@ function saleTurn(u: U, draft: Draft | null, catalog: CatalogItem[], defaultCurr
   const meta = {
     currency,
     payment_mode: (u.payment_mode ?? draft?.payment_mode ?? "paypal_qr") as PaymentMode,
-    payer_email: u.payer_email ?? draft?.payer_email,
+    payer_email: [u.payer_email, draft?.payer_email].find(isValidEmail) ?? undefined, // a half-heard address ("anna@example") is dropped, not carried to PayPal
     payer_name: u.payer_name ?? draft?.payer_name,
   };
   if (unknown.length) {
@@ -76,7 +76,7 @@ function saleTurn(u: U, draft: Draft | null, catalog: CatalogItem[], defaultCurr
 }
 
 async function catalogTurn(newItem: U["new_item"]): Promise<TurnResult> {
-  const ok = newItem && Number.isFinite(newItem.price) && newItem.price > 0 && newItem.price <= 500 && newItem.name.trim().length > 0 && newItem.name.length <= 60;
+  const ok = newItem && Number.isFinite(newItem.price) && newItem.price >= 0.01 && newItem.price <= 500 && Math.abs(newItem.price * 100 - Math.round(newItem.price * 100)) < 1e-6 && newItem.name.trim().length > 0 && newItem.name.length <= 60;
   if (!newItem || !ok) return { kind: "unknown", speak: "I didn't catch the price." };
   const item = await addCatalogItem(newItem);
   return { kind: "catalog_added", item, speak: `Added ${item.name.toLowerCase()}, ${spokenAmount(item.price, "USD")}. ${item.aliases[0] ? `Say '${item.aliases[0]}' to sell it.` : ""}`.trim() };

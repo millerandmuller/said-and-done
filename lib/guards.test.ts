@@ -100,4 +100,8 @@ describe("cents, modes and key binding", () => {
     const { items } = priceLines([{ sku: "honey-500", qty: 1, custom_price: 0.003 }], DEFAULT_CATALOG, 1);
     expect(items[0].unit_price).toBe(8);
   });
+  it("rejects null or non-object items without a raw JS error", () => {
+    expect(validateSale({ ...good, items: [null as never] })).toBe("An item is not valid.");
+    expect(validateSale({ ...good, items: ["x" as never] })).toBe("An item is not valid.");
+  });
 });

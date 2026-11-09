@@ -58,7 +58,7 @@ export function ConfirmStage(props: {
   );
 }
 
-export function QrScreen(props: { awaiting: Awaiting; offline: boolean; onCash: () => void; onLater: () => void; onCancel: () => void }) {
+export function QrScreen(props: { awaiting: Awaiting; offline: boolean; notice: string; onCash: () => void; onLater: () => void; onCancel: () => void }) {
   const { awaiting, offline } = props;
   const pending = awaiting.status === "PAYMENT_PENDING";
   return (
@@ -70,7 +70,7 @@ export function QrScreen(props: { awaiting: Awaiting; offline: boolean; onCash: 
       ) : (
         <div className="qr-fallback">Open this link to pay:<br />{awaiting.payer_url}</div>
       )}
-      <p className="sub">{pending ? "" : "Show this to pay."}</p>
+      <p className="sub">{pending ? "" : props.notice || "Show this to pay."}</p>
       {pending && <span className="status-pending">Almost there.</span>}
       {offline && <span className="status-pending">No connection. Cash?</span>}
       <div className="actions">

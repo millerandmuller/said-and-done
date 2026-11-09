@@ -15,6 +15,7 @@ export const MAX_UNIT_PRICE = 1000;
 export const MAX_SALE_TOTAL = 5000;
 export const ALLOWED_CURRENCIES = ["USD", "EUR"];
 const PAYMENT_MODES: PaymentMode[] = ["paypal_qr", "paypal_later", "cash"];
+export const isValidEmail = (e: unknown): e is string => typeof e === "string" && e.length <= 120 && EMAIL_SHAPE.test(e);
 const EMAIL_SHAPE = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
 
 // Guard for anything that reaches PayPal. The browser is not trusted: lines must be positive, bounded, and the total is recomputed.
@@ -22,13 +23,14 @@ export function validateSale(sale: Sale): string | null {
   if (!sale || !Array.isArray(sale.items) || sale.items.length === 0) return "There is nothing to invoice.";
   if (!ALLOWED_CURRENCIES.includes(sale.currency)) return `Currency ${sale.currency} is not supported.`;
   for (const i of sale.items) {
+    if (!i || typeof i !== "object") return "An item is not valid.";
     if (!Number.isInteger(i.qty) || i.qty < 1 || i.qty > MAX_QTY) return `Quantity for ${i.name} must be between 1 and ${MAX_QTY}.`;
     if (!Number.isFinite(i.unit_price) || i.unit_price < 0.01 || i.unit_price > MAX_UNIT_PRICE) return `Price for ${i.name} is out of range.`;
     if (Math.abs(i.unit_price * 100 - Math.round(i.unit_price * 100)) > 1e-6) return `Price for ${i.name} must be in whole cents.`;
     if (typeof i.name !== "string" || !i.name.trim() || i.name.length > 100) return "An item name is missing or too long.";
   }
   if (!PAYMENT_MODES.includes(sale.payment_mode)) return "Unknown payment mode.";
-  if (sale.payer_email != null && (typeof sale.payer_email !== "string" || sale.payer_email.length > 120 || !EMAIL_SHAPE.test(sale.payer_email))) return "That email address does not look right.";
+  if (sale.payer_email != null && !isValidEmail(sale.payer_email)) return "That email address does not look right.";
   if (sale.payer_name != null && (typeof sale.payer_name !== "string" || sale.payer_name.length > 60)) return "The payer name is not valid.";
   if (totalOf(sale.items) > MAX_SALE_TOTAL) return "That total is too large for the counter.";
   return null;
