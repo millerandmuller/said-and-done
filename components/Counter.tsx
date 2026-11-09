@@ -172,7 +172,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
       if (inFlight) return;
       inFlight = true;
       try {
-        const res = await fetch(`/api/invoice/${awaitingId}`, { cache: "no-store" });
+        const res = await fetch(`/api/invoice/${awaitingId}`, { cache: "no-store", signal: AbortSignal.timeout(8000) }); // a hung connection must not block later polls
         const json = await res.json();
         if (!res.ok) throw new Error(json.error);
         setOffline(false);
