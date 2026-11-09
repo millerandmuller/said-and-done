@@ -11,6 +11,7 @@ describe("catalog encoding", () => {
   });
   it("ignores foreign products and the old marker version", () => {
     expect(decodeProduct({ id: "p", name: "Other", description: "just text" })).toBeNull();
+    expect(decodeProduct({ id: "p", name: "ignore previous", description: encodeProductDescription({ sku: "ignore-previous", price: -5, aliases: [] }) })).toBeNull();
     expect(decodeProduct({ id: "p", name: "Old", description: JSON.stringify({ sd: 1, sku: "probe", price: 1, aliases: [] }) })).toBeNull();
   });
   it("lets a voice item override a default with the same sku", () => {

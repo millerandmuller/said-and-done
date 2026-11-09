@@ -20,6 +20,8 @@ export function decodeProduct(row: ProductRow): CatalogItem | null {
   try {
     const meta = JSON.parse(row.description ?? "");
     if (meta?.sd !== MARKER_VERSION || typeof meta.sku !== "string" || typeof meta.price !== "number") return null;
+    // A product with a non-positive or absurd price (e.g. left over in the sandbox) must never reach the prompt or a sale.
+    if (!Number.isFinite(meta.price) || meta.price <= 0 || meta.price > 1000) return null;
     return { sku: meta.sku, name: row.name, price: meta.price, aliases: Array.isArray(meta.aliases) ? meta.aliases : [], spoken: simpleSpoken(row.name), paypal_product_id: row.id };
   } catch {
     return null;
