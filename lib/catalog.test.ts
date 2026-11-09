@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CATALOG } from "../data/default-catalog";
-import { decodeProduct, encodeProductDescription, mergeCatalogs } from "./catalog";
+import { decodeProduct, encodeProductDescription, mergeCatalogs, oldestFirst } from "./catalog";
 
 describe("catalog encoding", () => {
   it("round-trips a voice-defined item through a PayPal product description", () => {
@@ -19,5 +19,15 @@ describe("catalog encoding", () => {
     expect(merged.find((c) => c.sku === "tea")?.price).toBe(9);
     expect(merged.find((c) => c.sku === "tea")?.spoken).toEqual(DEFAULT_CATALOG.find((c) => c.sku === "tea")?.spoken);
     expect(merged).toHaveLength(DEFAULT_CATALOG.length);
+  });
+  it("two products with one sku: the newest definition wins, whatever order PayPal lists them in", () => {
+    const old = { id: "PROD-B", name: "Wildflower soap bars", create_time: "2026-11-09T10:00:00Z", description: encodeProductDescription({ sku: "wildflower-soap-bars", price: 4, aliases: [] }) };
+    const fresh = { id: "PROD-A", name: "Wildflower soap bars", create_time: "2026-11-09T18:00:00Z", description: encodeProductDescription({ sku: "wildflower-soap-bars", price: 5, aliases: ["the meadow bar"] }) };
+    for (const rows of [[old, fresh], [fresh, old]]) {
+      const extras = oldestFirst(rows).map(decodeProduct).filter((x) => x !== null);
+      const item = mergeCatalogs(DEFAULT_CATALOG, extras).find((c) => c.sku === "wildflower-soap-bars");
+      expect(item?.price).toBe(5);
+      expect(item?.aliases).toEqual(["the meadow bar"]);
+    }
   });
 });

@@ -11,6 +11,7 @@ import type { CheckoutResult } from "@/lib/checkout";
 import type { TurnResult } from "@/lib/turn";
 import type { LedgerRow } from "@/lib/types";
 import { classify, parseQuantity } from "@/lib/voice-commands";
+import { Backdrop } from "./Backdrop";
 import { CashScreen, ConfirmStage, LaterScreen, ListeningStage, OwesList, PaidScreen, QrScreen, StartScreen } from "./screens";
 
 const POLL_MS = 3000;
@@ -267,6 +268,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
   const busy = phase === "creating";
   return (
     <div className="shell">
+      {!(phase === "awaiting_payment" || phase === "paid" || phase === "cash" || phase === "later") && <Backdrop />}
       <header className="topbar"><b>{sellerName}</b><span className="sandbox">PayPal sandbox</span></header>
 
       {phase === "awaiting_payment" && state.awaiting && (
