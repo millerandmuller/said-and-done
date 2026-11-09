@@ -81,3 +81,23 @@ describe("curated history is disclosed aloud", () => {
     expect(spokenPlan([{ sku: "x", text: "Bring more honey: 8 sold today against 2 last Saturday." }], true)).toMatch(/curated history\.$/);
   });
 });
+
+describe("cents, modes and key binding", () => {
+  const withPrice = (unit_price: number): Sale => ({ ...good, items: [{ sku: "x", name: "X", qty: 1, unit_price }], total: unit_price });
+  it("rejects sub-cent and fractional-cent prices", () => {
+    expect(validateSale(withPrice(0.001))).not.toBeNull();
+    expect(validateSale(withPrice(0.333))).not.toBeNull();
+    expect(validateSale(withPrice(0.01))).toBeNull();
+    expect(validateSale(withPrice(7.5))).toBeNull();
+  });
+  it("rejects an unknown payment mode, a bad email and an oversized name", () => {
+    expect(validateSale({ ...good, payment_mode: "bogus" as never })).not.toBeNull();
+    expect(validateSale({ ...good, payment_mode: "paypal_later", payer_email: "not an email\r\nBcc: x@y.z" })).not.toBeNull();
+    expect(validateSale({ ...good, payment_mode: "paypal_later", payer_email: "anna@example.com", payer_name: "Anna" })).toBeNull();
+    expect(validateSale({ ...good, payer_name: "x".repeat(61) })).not.toBeNull();
+  });
+  it("ignores a spoken price that rounds to zero and uses the catalog price", () => {
+    const { items } = priceLines([{ sku: "honey-500", qty: 1, custom_price: 0.003 }], DEFAULT_CATALOG, 1);
+    expect(items[0].unit_price).toBe(8);
+  });
+});

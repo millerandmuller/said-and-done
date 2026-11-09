@@ -14,6 +14,8 @@ export const MAX_QTY = 99;
 export const MAX_UNIT_PRICE = 1000;
 export const MAX_SALE_TOTAL = 5000;
 export const ALLOWED_CURRENCIES = ["USD", "EUR"];
+const PAYMENT_MODES: PaymentMode[] = ["paypal_qr", "paypal_later", "cash"];
+const EMAIL_SHAPE = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
 
 // Guard for anything that reaches PayPal. The browser is not trusted: lines must be positive, bounded, and the total is recomputed.
 export function validateSale(sale: Sale): string | null {
@@ -21,9 +23,13 @@ export function validateSale(sale: Sale): string | null {
   if (!ALLOWED_CURRENCIES.includes(sale.currency)) return `Currency ${sale.currency} is not supported.`;
   for (const i of sale.items) {
     if (!Number.isInteger(i.qty) || i.qty < 1 || i.qty > MAX_QTY) return `Quantity for ${i.name} must be between 1 and ${MAX_QTY}.`;
-    if (!Number.isFinite(i.unit_price) || i.unit_price <= 0 || i.unit_price > MAX_UNIT_PRICE) return `Price for ${i.name} is out of range.`;
+    if (!Number.isFinite(i.unit_price) || i.unit_price < 0.01 || i.unit_price > MAX_UNIT_PRICE) return `Price for ${i.name} is out of range.`;
+    if (Math.abs(i.unit_price * 100 - Math.round(i.unit_price * 100)) > 1e-6) return `Price for ${i.name} must be in whole cents.`;
     if (typeof i.name !== "string" || !i.name.trim() || i.name.length > 100) return "An item name is missing or too long.";
   }
+  if (!PAYMENT_MODES.includes(sale.payment_mode)) return "Unknown payment mode.";
+  if (sale.payer_email != null && (typeof sale.payer_email !== "string" || sale.payer_email.length > 120 || !EMAIL_SHAPE.test(sale.payer_email))) return "That email address does not look right.";
+  if (sale.payer_name != null && (typeof sale.payer_name !== "string" || sale.payer_name.length > 60)) return "The payer name is not valid.";
   if (totalOf(sale.items) > MAX_SALE_TOTAL) return "That total is too large for the counter.";
   return null;
 }
@@ -38,7 +44,9 @@ export function priceLines(lines: DraftLine[], catalog: CatalogItem[], fx: numbe
   const unknown: DraftLine[] = [];
   for (const line of lines) {
     const qty = Math.min(MAX_QTY, Math.max(1, Math.round(line.qty || 1)));
-    const custom = line.custom_price != null && line.custom_price > 0 ? Math.min(line.custom_price, MAX_UNIT_PRICE) : null; // zero or negative prices are never honoured
+    // Zero, negative or sub-cent (after conversion) prices are never honoured.
+    const wanted = line.custom_price != null && line.custom_price > 0 ? Math.min(line.custom_price, MAX_UNIT_PRICE) : null;
+    const custom = wanted !== null && round2(wanted * fx) >= 0.01 ? wanted : null;
     const item = line.sku ? bySku.get(line.sku) : undefined;
     if (item) {
       const base = custom ?? item.price;

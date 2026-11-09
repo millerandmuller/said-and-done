@@ -1,6 +1,6 @@
 // Thin wrapper around the PayPal Agent Toolkit (Vercel AI SDK adapter).
-// The toolkit is the primary way this app talks to PayPal: invoices, catalog and reporting
-// all go through its tools. Only verbs the toolkit lacks use lib/paypal-rest.ts.
+// Every PayPal call in this app (invoices, QR, status, payments, reminders, catalog) goes through the toolkit's tools.
+// Reporting tools are not used: the sandbox does not provide them (see README).
 import { PayPalAgentToolkit } from "@paypal/agent-toolkit/ai-sdk";
 import { getConfig } from "./config";
 

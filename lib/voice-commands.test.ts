@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { classify, parseQuantity } from "./voice-commands";
 
 describe("classify", () => {
-  it.each([["Yes."], ["yeah"], ["Go ahead!"], ["OK"]])("%s is yes", (t) => expect(classify(t)).toBe("yes"));
+  it.each([["Yes."], ["yeah"], ["Go ahead!"], ["That's right"]])("%s is yes", (t) => expect(classify(t)).toBe("yes"));
+  it.each([["OK"], ["okay"], ["sure"], ["right"], ["correct"]])("%s is not a yes: customers say it to each other", (t) => expect(classify(t)).toBe("other"));
   it.each([["no"], ["Nope."]])("%s is no", (t) => expect(classify(t)).toBe("no"));
   it.each([["never mind"], ["Cancel that"]])("%s is never mind", (t) => expect(classify(t)).toBe("never_mind"));
   it("hears cash and later", () => {

@@ -4,6 +4,10 @@ import { interpretTurn, type Draft } from "@/lib/turn";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { utterance: string; draft: Draft | null; focusSku?: string };
-  return respond(() => interpretTurn(body.utterance, body.draft, body.focusSku));
+  return respond(async () => {
+    const body = (await req.json().catch(() => null)) as { utterance?: unknown; draft?: Draft | null; focusSku?: string } | null;
+    if (!body || typeof body.utterance !== "string" || body.utterance.length > 2000) throw new Error("Bad request.");
+    const draft = body.draft && Array.isArray(body.draft.items) ? body.draft : null;
+    return interpretTurn(body.utterance, draft, body.focusSku);
+  });
 }

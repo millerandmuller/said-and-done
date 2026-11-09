@@ -31,7 +31,9 @@ export function startCheckout(clientSale: Sale, saleKey?: string): Promise<Check
   const problem = validateSale(clientSale);
   if (problem) return Promise.reject(new Error(problem));
   const sale: Sale = { ...clientSale, total: totalOf(clientSale.items) };
-  return once(saleKey, () => runCheckout(sale));
+  // The key is bound to the sale content: reusing a key for a different sale makes a new invoice instead of returning the old one.
+  const bound = saleKey ? `${saleKey}|${sale.currency}|${sale.payment_mode}|${sale.payer_email ?? ""}|${JSON.stringify(sale.items.map((i) => [i.sku, i.qty, i.unit_price]))}` : undefined;
+  return once(bound, () => runCheckout(sale));
 }
 
 async function runCheckout(sale: Sale): Promise<CheckoutResult> {

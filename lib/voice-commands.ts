@@ -4,7 +4,8 @@ export type Command = "yes" | "no" | "cash" | "later" | "never_mind" | "other";
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
 
-const YES = new Set(["yes", "yeah", "yep", "yup", "correct", "right", "that's right", "go ahead", "do it", "confirm", "confirmed", "ok", "okay", "sure", "yes please"]);
+// Deliberately no "ok", "okay", "sure", "right", "correct": customers say those to each other and must not fire an invoice.
+const YES = new Set(["yes", "yeah", "yep", "yup", "that's right", "go ahead", "do it", "confirm", "confirmed", "yes please"]);
 const NO = new Set(["no", "nope", "wrong", "not that", "nah"]);
 const NEVER_MIND = new Set(["never mind", "nevermind", "cancel", "cancel that", "forget it", "scratch that", "stop"]);
 const CASH = new Set(["cash", "in cash", "cash please", "she pays cash", "he pays cash", "they pay cash", "paid cash", "cash it"]);

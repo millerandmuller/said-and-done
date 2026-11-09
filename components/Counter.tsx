@@ -30,7 +30,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
   const [owes, setOwes] = useState<{ rows: LedgerRow[]; loading: boolean; reminding: boolean }>({ rows: [], loading: false, reminding: false });
   const stateRef = useRef(state);
   stateRef.current = state;
-  const pendingPrice = useRef<{ original: string; name: string } | null>(null); // "I don't know 'the blue one'. What does it cost?"
+  const pendingPrice = useRef<{ original: string; name: string; draft: ReturnType<typeof draftOf> } | null>(null); // "I don't know 'the blue one'. What does it cost?"
   const heardRef = useRef<(text: string) => void>(() => {});
   const rejectTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // a bare "no" waits briefly for "...three"
   const saleKey = useRef<{ sig: string; id: string } | null>(null); // same sale, same key: a retry never makes a second invoice
@@ -57,14 +57,14 @@ export function Counter({ sellerName }: { sellerName: string }) {
     pendingPrice.current = null;
     const utterance = pending ? `${pending.original}. The ${pending.name} costs ${text}.` : text;
     try {
-      const r = await post<TurnResult>("/api/turn", { utterance, draft: pending ? null : draftOf(stateRef.current), focusSku: stateRef.current.focusSku });
+      const r = await post<TurnResult>("/api/turn", { utterance, draft: pending ? pending.draft : draftOf(stateRef.current), focusSku: stateRef.current.focusSku });
       if (r.kind === "sale") {
         dispatch({ type: "sale_ready", sale: r.sale, speak: r.speak });
         void speakRef.current(r.speak);
       } else if (r.kind === "ignored") {
         dispatch({ type: "ignore" }); // bystander chatter: stay silent, the faint transcript already shows what was heard
       } else {
-        if (r.kind === "ask_price") pendingPrice.current = { original: utterance, name: r.unknown[0] };
+        if (r.kind === "ask_price") pendingPrice.current = { original: utterance, name: r.unknown[0], draft: draftOf(stateRef.current) };
         reply(r.speak);
       }
     } catch (e) {
@@ -108,7 +108,9 @@ export function Counter({ sellerName }: { sellerName: string }) {
     const a = stateRef.current.awaiting;
     if (!a) return;
     try {
-      await post(`/api/invoice/${a.invoice_id}`, { action: "cash", total: a.sale.total, currency: a.sale.currency });
+      const r = await post<{ status: string }>(`/api/invoice/${a.invoice_id}`, { action: "cash" });
+      // PayPal's answer decides the screen: if the buyer paid a moment earlier, the status poll flips to PAID instead of Cash.
+      if (r.status !== "MARKED_AS_PAID") return;
       dispatch({ type: "cash", total: a.sale.total, currency: a.sale.currency });
       void speakRef.current("Cash. Noted.");
     } catch {
@@ -119,9 +121,14 @@ export function Counter({ sellerName }: { sellerName: string }) {
   const cancelInvoice = useCallback(async () => {
     const a = stateRef.current.awaiting;
     if (!a) return;
-    dispatch({ type: "reject" });
-    try { await post(`/api/invoice/${a.invoice_id}`, { action: "cancel" }); } catch (e) { console.error("cancel failed", e); }
-  }, []);
+    try {
+      const r = await post<{ status: string }>(`/api/invoice/${a.invoice_id}`, { action: "cancel" });
+      if (r.status === "CANCELLED") dispatch({ type: "reject" }); // a refused cancel (already paid) stays on screen; the poll shows PAID
+    } catch (e) {
+      console.error("cancel failed", e);
+      reply("I couldn't cancel that. The QR stays up.");
+    }
+  }, [reply]);
 
   const keepForLater = useCallback(() => {
     dispatch({ type: "later", message: "Noted. It stays under Owes." });
