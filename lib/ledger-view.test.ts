@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byItem, byMethod, toLines, totalOfRows } from "./ledger-view";
+import { byItem, byMethod, dayLabel, methodLabel, statusLabel, toLines, totalOfRows } from "./ledger-view";
 import type { LedgerRow } from "./types";
 
 const rows: LedgerRow[] = [
@@ -22,5 +22,23 @@ describe("ledger view", () => {
   it("totals paid rows and converts euros back to dollars", () => {
     expect(totalOfRows(rows, 0.92)).toBe(29);
     expect(totalOfRows([{ ...rows[0], currency: "EUR", total: 18.4 }], 0.92)).toBe(20);
+  });
+});
+
+describe("human labels", () => {
+  it("writes the day as a short date", () => {
+    expect(dayLabel("2026-11-07")).toBe("Sat 7 Nov");
+    expect(dayLabel("2026-11-09")).toBe("Mon 9 Nov");
+    expect(dayLabel("not a day")).toBe("not a day");
+  });
+  it("labels status and method", () => {
+    expect(statusLabel("PAID", "PAYPAL")).toBe("Paid");
+    expect(statusLabel("MARKED_AS_PAID", "CASH")).toBe("Paid, cash");
+    expect(statusLabel("MARKED_AS_PAID", "PAYPAL")).toBe("Paid");
+    expect(statusLabel("UNPAID", "PAYPAL")).toBe("Due");
+    expect(statusLabel("PARTIALLY_PAID", "PAYPAL")).toBe("Due");
+    expect(statusLabel("CANCELLED", "CASH")).toBe("Cancelled");
+    expect(methodLabel("CASH")).toBe("Cash");
+    expect(methodLabel("PAYPAL")).toBe("PayPal");
   });
 });

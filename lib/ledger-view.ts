@@ -1,6 +1,7 @@
 // Shapes ledger rows for the AG Grid tables. Row grouping is an AG Grid Enterprise feature (brief: Community only),
 // so the by-item and by-method roll-ups are computed here and shown as their own small grids.
 import { dayKey, isPaid, toDollars } from "./day";
+import { OWING_STATES } from "./statuses";
 import type { LedgerRow } from "./types";
 
 export type LineRow = { invoice_id: string; day: string; item: string; qty: number; amount: number; method: "PAYPAL" | "CASH"; status: string; payer: string; curated: boolean };
@@ -37,4 +38,25 @@ export const byMethod = (lines: LineRow[]) => rollup(lines, (l) => (l.method ===
 
 export function totalOfRows(rows: LedgerRow[], fx: number): number {
   return Math.round(rows.filter(isPaid).reduce((s, r) => s + toDollars(r, fx), 0) * 100) / 100;
+}
+
+// Human labels for the books table (the raw values stay in the rows for sorting and filtering).
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-11-07" -> "Sat 7 Nov". The key is already a calendar date in the stall's timezone, so no timezone maths here. */
+export function dayLabel(key: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return key;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+export const methodLabel = (method: "PAYPAL" | "CASH") => (method === "CASH" ? "Cash" : "PayPal");
+
+export function statusLabel(status: string, method: "PAYPAL" | "CASH"): string {
+  if (status === "PAID") return "Paid";
+  if (status === "MARKED_AS_PAID") return method === "CASH" ? "Paid, cash" : "Paid";
+  if ((OWING_STATES as string[]).includes(status)) return "Due";
+  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
 }

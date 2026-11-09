@@ -240,6 +240,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
     }
   }, []);
   useEffect(() => { if (tab === "owes") void loadOwes(); }, [tab, loadOwes]);
+  useEffect(() => { void fetch("/api/ledger").catch(() => {}); }, []); // warm the ledger as soon as the page opens
 
   // A pending "What does it cost?" must not outlive its sale: Yes/No buttons, rejects and terminal screens all end it.
   useEffect(() => {
@@ -263,7 +264,10 @@ export function Counter({ sellerName }: { sellerName: string }) {
     }
   }, [reply]);
 
-  const start = () => { unlockAudio(); speech.start(); dispatch({ type: "start" }); };
+  const start = () => {
+    unlockAudio(); speech.start(); dispatch({ type: "start" });
+    void fetch("/api/ledger").catch(() => {}); // warm the ledger now so "how did today go" and the books are not a cold 10 s later
+  };
   const [typed, setTyped] = useState("");
 
   const { phase } = state;
