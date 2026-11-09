@@ -14,7 +14,7 @@ import { classify, parseQuantity } from "@/lib/voice-commands";
 import { CashScreen, ConfirmStage, LaterScreen, ListeningStage, OwesList, PaidScreen, QrScreen, StartScreen } from "./screens";
 
 const POLL_MS = 3000;
-const TERMINAL_MS = { paid: 3500, cash: 2500, later: 3200 } as const;
+const TERMINAL_MS = { paid: 5000, cash: 2500, later: 3200 } as const;
 
 async function post<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) }); // a hung request must not freeze the counter
