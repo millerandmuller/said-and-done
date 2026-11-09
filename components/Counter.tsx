@@ -6,11 +6,11 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { playChime, unlockAudio } from "@/lib/chime";
 import { draftOf, initialState, reducer } from "@/lib/counter-machine";
 import { owing } from "@/lib/day";
-import { buildSale, setQuantity, spokenAmount } from "@/lib/sale-math";
+import { buildSale, confirmationSentence, setQuantity, spokenAmount } from "@/lib/sale-math";
 import type { CheckoutResult } from "@/lib/checkout";
 import type { TurnResult } from "@/lib/turn";
 import type { LedgerRow } from "@/lib/types";
-import { classify } from "@/lib/voice-commands";
+import { classify, parseQuantity } from "@/lib/voice-commands";
 import { CashScreen, ConfirmStage, LaterScreen, ListeningStage, OwesList, PaidScreen, QrScreen, StartScreen } from "./screens";
 
 const POLL_MS = 3000;
@@ -32,6 +32,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
   stateRef.current = state;
   const pendingPrice = useRef<{ original: string; name: string } | null>(null); // "I don't know 'the blue one'. What does it cost?"
   const heardRef = useRef<(text: string) => void>(() => {});
+  const rejectTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // a bare "no" waits briefly for "...three"
   const busyRef = useRef(false); // one turn at a time: a second sentence while thinking is ignored
 
   const speech = useSpeech({
@@ -135,20 +136,32 @@ export function Counter({ sellerName }: { sellerName: string }) {
       return;
     }
     if (phase === "confirming") {
+      if (rejectTimer.current) { clearTimeout(rejectTimer.current); rejectTimer.current = null; }
+      const qty = parseQuantity(text);
+      const focus = stateRef.current.focusSku;
+      if (qty !== null && focus) return adjustTo(focus, qty); // "no, three": deterministic, no model round trip
       if (cmd === "yes") return void confirm();
-      if (cmd === "no" || cmd === "never_mind") return dispatch({ type: "reject" });
+      if (cmd === "never_mind") return dispatch({ type: "reject" });
+      // Recognizers often split "no, three" into "no" then "three"; give the number 1.8 s before dropping the sale.
+      if (cmd === "no") { rejectTimer.current = setTimeout(() => { rejectTimer.current = null; dispatch({ type: "reject" }); }, 1800); return; }
     }
     void runTurn(text);
   };
 
-  const adjust = useCallback((sku: string, delta: number) => {
+  const adjustTo = useCallback((sku: string, qty: number) => {
     const sale = stateRef.current.sale;
     if (!sale) return;
-    const line = sale.items.find((i) => i.sku === sku);
-    const items = setQuantity(sale.items, sku, (line?.qty ?? 0) + delta);
+    const items = setQuantity(sale.items, sku, qty);
     if (!items.length) return dispatch({ type: "reject" });
-    dispatch({ type: "sale_ready", sale: buildSale(items, sale), speak: "" });
+    const next = buildSale(items, sale);
+    const sentence = confirmationSentence(next);
+    dispatch({ type: "sale_ready", sale: next, speak: sentence });
+    void speakRef.current(sentence); // read the corrected sale back so the seller can say "yes"
   }, []);
+  const adjust = useCallback((sku: string, delta: number) => {
+    const line = stateRef.current.sale?.items.find((i) => i.sku === sku);
+    adjustTo(sku, (line?.qty ?? 0) + delta);
+  }, [adjustTo]);
 
   // Polling: one GET per tick, never overlapping; network loss keeps the QR and resumes by itself (brief F9).
   const awaitingId = state.awaiting?.invoice_id;
@@ -232,7 +245,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
       {phase === "cash" && state.lastPaid && <CashScreen {...state.lastPaid} />}
       {phase === "later" && <LaterScreen message={state.message} />}
 
-      {tab === "owes" ? (
+      {tab === "counter" && (phase === "awaiting_payment" || phase === "paid" || phase === "cash" || phase === "later") ? null : tab === "owes" ? (
         <OwesList rows={owes.rows} loading={owes.loading} reminding={owes.reminding} onRemind={remindAll} />
       ) : phase === "off" ? (
         <StartScreen onStart={start} />

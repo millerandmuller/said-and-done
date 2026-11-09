@@ -19,3 +19,17 @@ export function classify(text: string): Command {
   if (LATER.has(t)) return "later";
   return "other";
 }
+
+const WORDS: Record<string, number> = {
+  zero: 0, one: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
+};
+
+// "no, three" / "no 3" / "make it three" / "three" / "make that 3 please": a bare quantity correction for the focused line.
+// Speech recognition writes "to"/"for" for 2/4, so those count too, but only inside this narrow pattern.
+export function parseQuantity(text: string): number | null {
+  const t = norm(text).replace(/^(no|nope|actually|wait|sorry|make it|make that|change it to|change that to|it's|its|let's say|say)\s+/, "")
+    .replace(/^(make it|make that|change it to)\s+/, "").replace(/\s+(please|of them|of those)$/, "").trim();
+  if (/^\d{1,2}$/.test(t)) return Number(t);
+  return t in WORDS ? WORDS[t] : null;
+}
