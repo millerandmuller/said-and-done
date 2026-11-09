@@ -44,7 +44,7 @@ export function buildSystemPrompt(catalog: CatalogItem[], draft: SaleItem[], foc
     "If a current draft exists and the sentence corrects it ('no, three', 'make that two candles', 'remove the soap', 'and a lip balm'), return the FULL updated list of lines, intent=sale.",
     "A new sale sentence replaces the draft entirely.",
     focus ? `A bare number or 'no, three' with no item name changes the quantity of the FOCUS line, sku=${focus}, and nothing else.` : "",
-    "payment_mode: 'by PayPal' / 'she pays by PayPal' / default for a sale -> paypal_qr; 'she pays later' / 'I'll bill her' -> paypal_later; 'cash' -> cash.",
+    "payment_mode: 'by PayPal' / 'she pays by PayPal' -> paypal_qr; 'she pays later' / 'I'll bill her' -> paypal_later; 'cash' -> cash. If the seller did not say how the buyer pays (including every correction like 'no, three'), payment_mode is null: the code keeps the draft's mode or defaults to PayPal.",
     "intent day_summary = 'how did today go'. plan_week = 'what should I bring next week'. remind_owing = 'remind everyone who still owes'. add_catalog_item = the seller defines a new product with a price.",
     "Anything else is intent=unknown with no items: small talk, bystander chatter, thinking aloud ('okay cool good just one second please', 'hold on', 'let me see', 'thanks'). Never invent a sale from chatter.",
     "",

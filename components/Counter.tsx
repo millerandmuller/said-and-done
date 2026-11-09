@@ -238,6 +238,14 @@ export function Counter({ sellerName }: { sellerName: string }) {
   }, []);
   useEffect(() => { if (tab === "owes") void loadOwes(); }, [tab, loadOwes]);
 
+  // A pending "What does it cost?" must not outlive its sale: Yes/No buttons, rejects and terminal screens all end it.
+  useEffect(() => {
+    const p = pendingPrice.current;
+    if (!p) return;
+    const sold = ["off", "creating", "awaiting_payment", "paid", "cash", "later"].includes(state.phase);
+    if (sold || (p.draft && !state.sale)) pendingPrice.current = null;
+  }, [state.phase, state.sale]);
+
   const remindAll = useCallback(async () => {
     setOwes((o) => ({ ...o, reminding: true }));
     try {
