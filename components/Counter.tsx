@@ -293,7 +293,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
         <ConfirmStage sale={state.sale} focusSku={state.focusSku} message={state.message} busy={busy}
           onFocus={(sku) => dispatch({ type: "focus", sku })} onAdjust={adjust} onYes={confirm} onNo={() => dispatch({ type: "reject" })} />
       ) : (
-        <ListeningStage transcript={state.transcript} message={state.message} thinking={phase === "thinking"} live={speech.listening} onTry={() => heardRef.current(SAMPLE_SENTENCE)} />
+        <ListeningStage transcript={state.transcript} message={state.message} thinking={phase === "thinking"} live={speech.listening} onTry={() => { pendingPrice.current = null; heardRef.current(SAMPLE_SENTENCE); }} />
       )}
 
       {!speech.supported && phase !== "off" && (

@@ -24,8 +24,9 @@ describe("README carries the case alone", () => {
 describe("one log on the QR and PAID screens", () => {
   const css = read("app/globals.css");
   it("hides the small log exactly where the proof card shows, and the card where it would touch the QR", () => {
-    expect(css).toMatch(/@media \(min-width: 1101px\) \{ \.proof \{ display: none; \} \}/);
-    expect(css).toMatch(/@media \(max-width: 1100px\) \{ \.proof-card \{ display: none; \} \}/);
+    expect(css).toMatch(/@media \(min-width: 1201px\) \{ \.proof \{ display: none; \} \}/);
+    expect(css).toMatch(/\n\.proof-card \{ display: none; \}/);
+    expect(css).toMatch(/@media \(min-width: 1201px\) \{ \.proof-card \{ display: block; \} \}/);
   });
   it("keeps proof-card rows on one line", () => {
     expect(css).toMatch(/\.proof-card li \{[^}]*white-space: nowrap/);
