@@ -18,7 +18,8 @@ export type TurnResult =
   | { kind: "plan"; speak: string }
   | { kind: "reminders"; speak: string; reminded: number }
   | { kind: "catalog_added"; speak: string; item: CatalogItem }
-  | { kind: "unknown"; speak: string };
+  | { kind: "unknown"; speak: string }
+  | { kind: "ignored" }; // chatter that is not a sale, command or question: the counter stays silent
 
 // Draft lines that were custom (not in the catalog) must survive a correction; expose them as temporary catalog entries.
 function withDraftCustoms(catalog: CatalogItem[], draft: Draft, fx: number): CatalogItem[] {
@@ -45,7 +46,7 @@ export async function interpretTurn(utterance: string, draft: Draft | null, focu
     case "remind_owing":
       return reminderTurn();
     default:
-      return { kind: "unknown", speak: "I didn't catch that." };
+      return { kind: "ignored" };
   }
 }
 
@@ -69,7 +70,7 @@ function saleTurn(u: U, draft: Draft | null, catalog: CatalogItem[], defaultCurr
     const names = unknown.map((l) => l.name ?? "that");
     return { kind: "ask_price", unknown: names, partial: items.length ? buildSale(items, meta) : null, speak: `I don't know '${names[0]}'. What does it cost?` };
   }
-  if (!items.length) return { kind: "unknown", speak: "I didn't catch that." };
+  if (!items.length) return { kind: "ignored" };
   const sale = buildSale(items, meta);
   return { kind: "sale", sale, speak: confirmationSentence(sale) };
 }

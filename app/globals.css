@@ -89,3 +89,14 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .books-rollups { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .grid-big { height: 460px; }
 .books-note { color: var(--ink-soft); font-size: 14px; }
+
+/* Readable proof card for the QR and PAID screens (the small .proof log stays). Hidden on phones. */
+.proof-card { position: fixed; right: 24px; bottom: 24px; width: min(30vw, 440px); background: rgba(0,0,0,.34); border: 1px solid rgba(255,255,255,.28); border-radius: 16px; padding: 16px 20px; text-align: left; color: #fff; font-family: ui-monospace, Menlo, monospace; }
+.proof-card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; letter-spacing: .02em; opacity: .85; }
+.proof-card ul { list-style: none; margin: 0 0 10px; padding: 0; font-size: 20px; line-height: 1.55; }
+.proof-card li { display: flex; justify-content: space-between; gap: 12px; }
+.proof-card .ok { color: #b7f0cf; margin-right: 8px; }
+.proof-card .ms { opacity: .8; }
+.proof-card .flip { margin: 0; font-size: 14px; opacity: .8; word-break: break-all; }
+.proof-card .flip.big { font-size: 26px; font-weight: 700; opacity: 1; margin-top: 4px; }
+@media (max-width: 900px) { .proof-card { display: none; } }

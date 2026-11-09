@@ -21,6 +21,9 @@ const CASES: Case[] = [
   { say: "how did today go", expectIntent: "day_summary" },
   { say: "what should I bring next week", expectIntent: "plan_week" },
   { say: "remind everyone who still owes", expectIntent: "remind_owing" },
+  { say: "okay cool good just one second please", expectIntent: "unknown" },
+  { say: "hold on, let me see, yeah that looks great", expectIntent: "unknown" },
+  { say: "thanks so much, I'll be right with you", expectIntent: "unknown" },
   { say: "I sell five hundred gram honey for eight dollars people call it the big jar", expectIntent: "add_catalog_item" },
 ];
 

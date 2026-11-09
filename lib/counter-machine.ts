@@ -24,6 +24,7 @@ export type CounterState = {
   awaiting: Awaiting | null;
   message: string; // the line the counter just said / shows (error voice included)
   lastPaid?: { total: number; currency: string };
+  lastTrace?: { invoice_id: string; trace: TraceStep[] }; // the proof card on the PAID screen
 };
 
 export const initialState: CounterState = { phase: "off", transcript: "", sale: null, awaiting: null, message: "" };
@@ -42,6 +43,7 @@ export type Action =
   | { type: "paid"; total: number; currency: string }
   | { type: "cash"; total: number; currency: string }
   | { type: "later"; message: string }
+  | { type: "ignore" } // chatter: leave "thinking" without changing the message
   | { type: "done" }; // leave a terminal screen, back to listening
 
 export function reducer(state: CounterState, action: Action): CounterState {
@@ -60,6 +62,10 @@ export function reducer(state: CounterState, action: Action): CounterState {
       const phase = busy ? (state.sale ? "confirming" : "listening") : state.phase;
       return { ...state, phase, message: action.message };
     }
+    case "ignore": {
+      if (state.phase !== "thinking") return state;
+      return { ...state, phase: state.sale ? "confirming" : "listening" };
+    }
     case "focus":
       return { ...state, focusSku: action.sku };
     case "reject":
@@ -71,7 +77,13 @@ export function reducer(state: CounterState, action: Action): CounterState {
     case "status":
       return state.awaiting ? { ...state, awaiting: { ...state.awaiting, status: action.status } } : state;
     case "paid":
-      return { ...state, phase: "paid", lastPaid: { total: action.total, currency: action.currency }, message: "Paid." };
+      return {
+        ...state,
+        phase: "paid",
+        lastPaid: { total: action.total, currency: action.currency },
+        lastTrace: state.awaiting ? { invoice_id: state.awaiting.invoice_id, trace: state.awaiting.trace } : undefined,
+        message: "Paid.",
+      };
     case "cash":
       return { ...state, phase: "cash", lastPaid: { total: action.total, currency: action.currency }, message: "Cash. Noted." };
     case "later":

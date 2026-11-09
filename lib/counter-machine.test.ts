@@ -36,3 +36,19 @@ describe("counter state machine", () => {
     expect(draftOf(initialState)).toBeNull();
   });
 });
+
+describe("ignore: bystander chatter", () => {
+  it("leaves thinking silently and keeps the draft", () => {
+    const sale = { items: [{ sku: "tea", name: "Tea", qty: 1, unit_price: 6 }], currency: "USD", total: 6, payment_mode: "paypal_qr" as const };
+    const confirming = reducer(initialState, { type: "sale_ready", sale, speak: "One tea, six dollars. Yes?" });
+    const after = reducer(reducer(confirming, { type: "thinking" }), { type: "ignore" });
+    expect(after.phase).toBe("confirming");
+    expect(after.message).toBe("One tea, six dollars. Yes?");
+  });
+  it("from an empty counter returns to listening without a message change", () => {
+    const listening = reducer(initialState, { type: "start" });
+    const after = reducer(reducer(listening, { type: "thinking" }), { type: "ignore" });
+    expect(after.phase).toBe("listening");
+    expect(after.message).toBe("Listening.");
+  });
+});

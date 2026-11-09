@@ -61,6 +61,8 @@ export function Counter({ sellerName }: { sellerName: string }) {
       if (r.kind === "sale") {
         dispatch({ type: "sale_ready", sale: r.sale, speak: r.speak });
         void speakRef.current(r.speak);
+      } else if (r.kind === "ignored") {
+        dispatch({ type: "ignore" }); // bystander chatter: stay silent, the faint transcript already shows what was heard
       } else {
         if (r.kind === "ask_price") pendingPrice.current = { original: utterance, name: r.unknown[0] };
         reply(r.speak);
@@ -224,6 +226,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
     setOwes((o) => ({ ...o, reminding: true }));
     try {
       const r = await post<TurnResult>("/api/turn", { utterance: "remind everyone who still owes", draft: null });
+      if (r.kind === "ignored") return;
       dispatch({ type: "say", message: r.speak });
       void speakRef.current(r.speak);
     } catch {
@@ -245,7 +248,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
       {phase === "awaiting_payment" && state.awaiting && (
         <QrScreen awaiting={state.awaiting} offline={offline} onCash={recordCash} onLater={keepForLater} onCancel={cancelInvoice} />
       )}
-      {phase === "paid" && state.lastPaid && <PaidScreen {...state.lastPaid} />}
+      {phase === "paid" && state.lastPaid && <PaidScreen {...state.lastPaid} proof={state.lastTrace} />}
       {phase === "cash" && state.lastPaid && <CashScreen {...state.lastPaid} />}
       {phase === "later" && <LaterScreen message={state.message} />}
 

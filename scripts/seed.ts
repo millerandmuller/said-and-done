@@ -56,8 +56,17 @@ async function seedPayLater(today: string) {
 async function resetOpen() {
   const rows = await fetchLedger({ fresh: true });
   const open = rows.filter((r) => OWING_STATES.includes(r.status));
-  await inParallel(open, 4, async (r) => { await callTool("cancel_sent_invoice", { invoice_id: r.invoice_id, send_to_recipient: false }); });
-  console.log(`reset: cancelled ${open.length} open invoices`);
+  const stuck: string[] = [];
+  await inParallel(open, 4, async (r) => {
+    try {
+      await callTool("cancel_sent_invoice", { invoice_id: r.invoice_id, send_to_recipient: false });
+    } catch (err) {
+      // PayPal refuses to cancel partially paid invoices; report them instead of aborting the reset.
+      stuck.push(`${r.invoice_id} (${r.status}): ${(err as Error).message.slice(-60)}`);
+    }
+  });
+  console.log(`reset: cancelled ${open.length - stuck.length} of ${open.length} open invoices`);
+  if (stuck.length) console.log(`reset: could not cancel, remove in the dashboard:\n  ${stuck.join("\n  ")}`);
 }
 
 async function main() {

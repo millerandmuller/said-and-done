@@ -46,6 +46,7 @@ export function buildSystemPrompt(catalog: CatalogItem[], draft: SaleItem[], foc
     focus ? `A bare number or 'no, three' with no item name changes the quantity of the FOCUS line, sku=${focus}, and nothing else.` : "",
     "payment_mode: 'by PayPal' / 'she pays by PayPal' / default for a sale -> paypal_qr; 'she pays later' / 'I'll bill her' -> paypal_later; 'cash' -> cash.",
     "intent day_summary = 'how did today go'. plan_week = 'what should I bring next week'. remind_owing = 'remind everyone who still owes'. add_catalog_item = the seller defines a new product with a price.",
+    "Anything else is intent=unknown with no items: small talk, bystander chatter, thinking aloud ('okay cool good just one second please', 'hold on', 'let me see', 'thanks'). Never invent a sale from chatter.",
     "",
     "CATALOG:",
     rows,
