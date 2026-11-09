@@ -34,8 +34,11 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 
 .line { font-family: var(--serif); font-size: clamp(26px, 6vw, 40px); line-height: 1.2; margin: 0; max-width: 22ch; }
 .sub { color: var(--ink-soft); font-size: 18px; min-height: 1.5em; margin: 0; max-width: 34ch; }
-.hint { color: var(--ink-soft); font-size: 15px; }
-.hint em { font-style: normal; border-bottom: 1px dotted var(--ink-soft); }
+/* "Try this sentence": a real button (typed sample for judges without a microphone), styled as a quiet pill, not a link. */
+.hint-btn { color: var(--ink-soft); font-size: 15px; background: rgba(250,246,236,.95); border: 1px solid var(--line); border-radius: 999px; padding: 10px 20px; min-height: 44px; cursor: pointer; max-width: min(92vw, 640px); }
+.hint-btn span { font-weight: 600; color: var(--ink); }
+.hint-btn em { font-style: normal; }
+.hint-btn:hover { border-color: var(--ink-soft); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 560px; }
 .chip { background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 14px 18px; min-height: 64px; font-size: 20px; display: flex; gap: 10px; align-items: center; }
@@ -68,6 +71,8 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .proof { position: fixed; left: 16px; bottom: 16px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; text-align: left; color: rgba(255,255,255,.9); line-height: 1.5; max-width: 52vw; background: #082d6b; border-radius: 12px; padding: 10px 14px; }
 .proof .ok { color: #b7f0cf; }
 @media (max-width: 700px) { .proof { display: none; } }
+/* One log, not two: the readable proof card (>= 1101 px) replaces the small log; the small log is the only trace between 701 and 1100 px. */
+@media (min-width: 1101px) { .proof { display: none; } }
 
 .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 16px 18px; }
 .tab { padding: 12px 20px; border-radius: 14px; font-size: 16px; color: var(--ink-soft); min-height: 48px; display: inline-flex; align-items: center; }
@@ -93,9 +98,9 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 /* Readable proof card for the QR and PAID screens (the small .proof log stays). Hidden on phones. */
 .proof-card { position: fixed; right: 24px; bottom: 24px; width: min(32vw, 480px); background: #082d6b; border: 1px solid rgba(255,255,255,.35); border-radius: 16px; padding: 16px 20px; text-align: left; color: #fff; font-family: ui-monospace, Menlo, monospace; }
 .proof-card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; letter-spacing: .02em; opacity: .85; }
-.proof-card ul { list-style: none; margin: 0 0 10px; padding: 0; font-size: 18px; line-height: 1.55; }
+.proof-card ul { list-style: none; margin: 0 0 10px; padding: 0; font-size: clamp(14px, 1.35vw, 18px); line-height: 1.55; } /* scales so "generate_invoice_qr_code ... 259 ms" fits one line from 1101 px up */
 .proof-card li { display: flex; justify-content: space-between; gap: 12px; white-space: nowrap; }
-.proof-card li .ms { flex: none; }
+.proof-card li .ms { flex: none; margin-left: auto; }
 .proof-card .ok { color: #b7f0cf; margin-right: 8px; }
 .proof-card .ms { opacity: .8; }
 .proof-card .flip { margin: 0; font-size: 14px; opacity: .8; word-break: break-all; }
@@ -105,7 +110,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 /* D1: watercolor art lives behind everything at the edges; text and chips sit on solid plates, never on art. */
 .backdrop { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .topbar, .stage, .tabs { position: relative; z-index: 1; }
-.stage .line, .stage .hint, .stage .total, .stage .sub:not(:empty) { background: rgba(250,246,236,.95); border-radius: 18px; padding: 8px 22px; }
+.stage .line, .stage .total, .stage .sub:not(:empty) { background: rgba(250,246,236,.95); border-radius: 18px; padding: 8px 22px; }
 .stage .total { padding: 6px 28px; }
 .stage .chip { box-shadow: 0 2px 10px rgba(80,60,20,.12); }
 .stage .mic { z-index: 1; }

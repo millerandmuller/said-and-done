@@ -1,6 +1,7 @@
 // Presentational screens for the counter. No fetching and no speech in here: props in, markup out.
 import type { Awaiting, TraceStep } from "@/lib/counter-machine";
 import { formatMoney } from "@/lib/format";
+import { SAMPLE_SENTENCE } from "@/lib/sample";
 import type { LedgerRow, Sale } from "@/lib/types";
 
 const MicIcon = () => (
@@ -17,13 +18,17 @@ export function StartScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-export function ListeningStage({ transcript, message, thinking, live }: { transcript: string; message: string; thinking: boolean; live: boolean }) {
+export function ListeningStage({ transcript, message, thinking, live, onTry }: { transcript: string; message: string; thinking: boolean; live: boolean; onTry: () => void }) {
   return (
     <div className="stage">
       <div className={`mic ${live && !thinking ? "live" : ""}`} aria-hidden="true"><MicIcon /></div>
       <p className="line">{thinking ? "One moment." : message || "Listening."}</p>
       <p className="sub" aria-live="polite">{transcript ? `“${transcript}”` : ""}</p>
-      {!thinking && <p className="hint">Try: <em>two jars of honey and the big candle, she pays by PayPal</em></p>}
+      {!thinking && (
+        <button className="hint-btn" onClick={onTry}>
+          <span>Try this sentence</span> <em>“{SAMPLE_SENTENCE}”</em>
+        </button>
+      )}
     </div>
   );
 }
