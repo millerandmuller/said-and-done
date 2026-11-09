@@ -31,3 +31,10 @@ describe("catalog encoding", () => {
     }
   });
 });
+
+describe("oldestFirst tolerates odd rows", () => {
+  it("does not throw on a missing id, a non-string time or a null row", () => {
+    const rows = [{ id: "B", name: "b", create_time: 5 as never }, { name: "no id" } as never, { id: "A", name: "a", create_time: "2026-01-01T00:00:00Z" }];
+    expect(() => oldestFirst(rows)).not.toThrow();
+  });
+});

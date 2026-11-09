@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 // Watercolor honeycomb at the frame edges (D1 design pass). Pure SVG, no image files, deterministic (no hydration drift).
 // Art only at the edges and corners; the centre stays clear so text and chips sit on plain paper or solid plates.
 const W = 1376;
@@ -75,7 +77,7 @@ function Candle({ x, y, h = 38 }: { x: number; y: number; h?: number }) {
   );
 }
 
-export function Backdrop() {
+export const Backdrop = memo(function Backdrop() {
   return (
     <svg className="backdrop" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
       <defs>
@@ -123,4 +125,4 @@ export function Backdrop() {
       <Bee x={1245} y={540} scale={.9} flip />
     </svg>
   );
-}
+});

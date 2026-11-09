@@ -150,6 +150,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
     dispatch({ type: "heard", text });
     if (phase === "off" || phase === "thinking" || phase === "creating" || phase === "paid" || phase === "cash" || phase === "later") return;
     const cmd = classify(text);
+    if (pendingPrice.current && cmd === "never_mind" && phase === "listening") { pendingPrice.current = null; return; } // drop an open price question
     if (phase === "awaiting_payment") {
       if (cmd === "cash") void recordCash();
       else if (cmd === "never_mind") void cancelInvoice(); // a bare "no" is ignored here: a buyer saying "no" must not kill a live QR
@@ -174,6 +175,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
   const adjustTo = useCallback((sku: string, qty: number) => {
     const sale = stateRef.current.sale;
     if (!sale) return;
+    pendingPrice.current = null; // a stepper change ends any open "What does it cost?"; the old draft would undo it
     const items = setQuantity(sale.items, sku, qty);
     if (!items.length) return dispatch({ type: "reject" });
     const next = buildSale(items, sale);

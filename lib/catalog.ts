@@ -12,7 +12,7 @@ type ProductRow = { id: string; name: string; description?: string; create_time?
 
 // Two products can carry one sku (the seller redefines an item by voice). Oldest first, so the newest definition wins in mergeCatalogs, whatever order PayPal lists them in.
 export function oldestFirst(rows: ProductRow[]): ProductRow[] {
-  return [...rows].sort((a, b) => (a.create_time ?? "").localeCompare(b.create_time ?? "") || a.id.localeCompare(b.id));
+  return [...rows].sort((a, b) => String(a?.create_time ?? "").localeCompare(String(b?.create_time ?? "")) || String(a?.id ?? "").localeCompare(String(b?.id ?? "")));
 }
 
 let cache: { items: CatalogItem[]; at: number } | null = null;
@@ -54,7 +54,7 @@ export async function getCatalog(): Promise<CatalogItem[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.items;
   try {
     const res = await callTool<{ products?: ProductRow[] }>("list_products", { page: 1, page_size: 100 });
-    const extras = oldestFirst(res.products ?? []).map(decodeProduct).filter((x): x is CatalogItem => x !== null);
+    const extras = oldestFirst((res.products ?? []).filter(Boolean)).map(decodeProduct).filter((x): x is CatalogItem => x !== null);
     cache = { items: mergeCatalogs(DEFAULT_CATALOG, extras), at: Date.now() };
   } catch (e) {
     console.warn("[catalog] PayPal list_products failed, serving last known catalog:", (e as Error).message);
