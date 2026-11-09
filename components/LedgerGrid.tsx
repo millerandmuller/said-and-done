@@ -3,7 +3,7 @@
 import { AllCommunityModule, ModuleRegistry, type ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useState } from "react";
-import { byItem, byMethod, dayLabel, methodLabel, statusLabel, toLines, totalOfRows, type LineRow, type RollupRow } from "@/lib/ledger-view";
+import { byItem, byMethod, dayLabel, filterByDay, methodLabel, statusLabel, toLines, totalOfRows, type DayFilter, type LineRow, type RollupRow } from "@/lib/ledger-view";
 import { formatMoney } from "@/lib/format";
 import type { LedgerRow } from "@/lib/types";
 
@@ -34,6 +34,7 @@ const lineCols: ColDef<LineRow>[] = [
 export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
   const [rows, setRows] = useState<LedgerRow[] | null>(null);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<DayFilter>("today");
 
   useEffect(() => {
     let live = true;
@@ -52,8 +53,9 @@ export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
     return () => { live = false; clearInterval(id); };
   }, []);
 
-  const lines = useMemo(() => (rows ? toLines(rows, tz, fx) : []), [rows, tz, fx]);
-  const total = rows ? totalOfRows(rows, fx) : 0;
+  const shown = useMemo(() => (rows ? filterByDay(rows, filter, tz, new Date().toISOString()) : []), [rows, filter, tz]);
+  const lines = useMemo(() => toLines(shown, tz, fx), [shown, tz, fx]);
+  const total = totalOfRows(shown, fx);
 
   return (
     <main className="books">
@@ -61,15 +63,22 @@ export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
         <a href="/" className="back">← Counter</a>
         <h1>The books</h1>
         <p>{rows ? `${new Set(lines.map((l) => l.invoice_id)).size} paid sales · ${formatMoney(total, "USD")}` : error || "Reading PayPal."}</p>
+        <div className="day-filter" role="group" aria-label="Which days">
+          {(["today", "last_saturday", "all"] as const).map((f) => (
+            <button key={f} className={filter === f ? "on" : ""} aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {f === "today" ? "Today" : f === "last_saturday" ? "Last Saturday" : "All days"}
+            </button>
+          ))}
+        </div>
       </header>
       <section className="books-rollups">
-        <div className="grid-small"><AgGridReact<RollupRow> rowData={byItem(lines)} columnDefs={rollupCols("By item")} domLayout="autoHeight" loading={!rows} overlayNoRowsTemplate="No paid sales yet." /></div>
-        <div className="grid-small"><AgGridReact<RollupRow> rowData={byMethod(lines)} columnDefs={rollupCols("By method")} domLayout="autoHeight" loading={!rows} overlayNoRowsTemplate="No paid sales yet." /></div>
+        <div className="grid-small"><AgGridReact<RollupRow> rowData={byItem(lines)} columnDefs={rollupCols("By item")} domLayout="autoHeight" loading={!rows} overlayNoRowsTemplate="No paid sales for these days." /></div>
+        <div className="grid-small"><AgGridReact<RollupRow> rowData={byMethod(lines)} columnDefs={rollupCols("By method")} domLayout="autoHeight" loading={!rows} overlayNoRowsTemplate="No paid sales for these days." /></div>
       </section>
       <div className="grid-big">
-        <AgGridReact<LineRow> rowData={lines} columnDefs={lineCols} defaultColDef={{ sortable: true, resizable: true }} loading={!rows} overlayNoRowsTemplate="No paid sales yet." />
+        <AgGridReact<LineRow> rowData={lines} columnDefs={lineCols} defaultColDef={{ sortable: true, resizable: true }} loading={!rows} overlayNoRowsTemplate="No paid sales for these days." />
       </div>
-      <p className="books-note">Every row is a PayPal sandbox invoice. “Curated history” rows are seeded sales labelled as earlier days; all live sales are marked “no”.</p>
+      <p className="books-note">Every row is a PayPal sandbox invoice, including test invoices made while the app was being checked. “Curated history” rows are seeded sales labelled as earlier days; all live sales are marked “no”. Nothing is hidden: pick “All days” to see everything.</p>
     </main>
   );
 }

@@ -1,6 +1,6 @@
 // Shapes ledger rows for the AG Grid tables. Row grouping is an AG Grid Enterprise feature (brief: Community only),
 // so the by-item and by-method roll-ups are computed here and shown as their own small grids.
-import { dayKey, isPaid, toDollars } from "./day";
+import { dayKey, isPaid, lastSaturdayKey, toDollars } from "./day";
 import { OWING_STATES } from "./statuses";
 import type { LedgerRow } from "./types";
 
@@ -59,4 +59,13 @@ export function statusLabel(status: string, method: "PAYPAL" | "CASH"): string {
   if (status === "MARKED_AS_PAID") return method === "CASH" ? "Paid, cash" : "Paid";
   if ((OWING_STATES as string[]).includes(status)) return "Due";
   return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
+}
+
+export type DayFilter = "today" | "last_saturday" | "all";
+
+/** The books default to Today; nothing is hidden by name or by any other rule, only by the day the seller picks. */
+export function filterByDay(rows: LedgerRow[], filter: DayFilter, tz: string, nowIso: string): LedgerRow[] {
+  if (filter === "all") return rows;
+  const want = filter === "today" ? dayKey(nowIso, tz) : lastSaturdayKey(nowIso, tz);
+  return rows.filter((r) => dayKey(r.time, tz) === want);
 }

@@ -62,6 +62,8 @@ Log in at https://www.sandbox.paypal.com/ on the phone that scans the QR.
 - **Curated history:** the "earlier today" and "last Saturday" sales, and the pay-later regular, are seeded sandbox
   invoices (`npm run seed`) with an external payment recorded. They are labelled "Curated history" in the ledger.
   Every sale made live in the demo is a real sandbox payment.
+- **Test invoices:** the sandbox account also holds invoices created while the app was being tested and reviewed. Nothing is
+  hidden: the books open on Today, and "All days" shows every invoice.
 - Sandbox only. No production credentials anywhere.
 - No webhooks: payment status is polled.
 

@@ -111,3 +111,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .stage .mic { z-index: 1; }
 .full.paid .proof-card { background: #14573a; }
 .stage .line { max-width: 30ch; }
+
+.day-filter { display: flex; gap: 6px; margin-top: 12px; }
+.day-filter button { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 15px; }
+.day-filter button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }

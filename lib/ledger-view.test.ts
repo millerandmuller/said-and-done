@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byItem, byMethod, dayLabel, methodLabel, statusLabel, toLines, totalOfRows } from "./ledger-view";
+import { byItem, byMethod, dayLabel, filterByDay, methodLabel, statusLabel, toLines, totalOfRows } from "./ledger-view";
 import type { LedgerRow } from "./types";
 
 const rows: LedgerRow[] = [
@@ -41,4 +41,13 @@ describe("human labels", () => {
     expect(methodLabel("CASH")).toBe("Cash");
     expect(methodLabel("PAYPAL")).toBe("PayPal");
   });
+});
+
+describe("filterByDay", () => {
+  const mk = (id: string, time: string): LedgerRow => ({ invoice_id: id, time, items: [], total: 0, currency: "USD", method: "PAYPAL", status: "PAID" });
+  const all = [mk("sat", "2026-11-07T20:00:00Z"), mk("mon1", "2026-11-09T20:00:00Z"), mk("mon2", "2026-11-09T09:00:00Z"), mk("sun", "2026-11-08T20:00:00Z")];
+  const now = "2026-11-09T18:00:00Z"; // Monday 10:00 in Los Angeles
+  it("today", () => expect(filterByDay(all, "today", "America/Los_Angeles", now).map((r) => r.invoice_id)).toEqual(["mon1", "mon2"]));
+  it("last Saturday", () => expect(filterByDay(all, "last_saturday", "America/Los_Angeles", now).map((r) => r.invoice_id)).toEqual(["sat"]));
+  it("all days keeps every row, nothing is hidden", () => expect(filterByDay(all, "all", "America/Los_Angeles", now)).toHaveLength(4));
 });
