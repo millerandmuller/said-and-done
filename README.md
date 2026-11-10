@@ -10,9 +10,9 @@ new catalog items by voice, and a spoken end-of-day summary with a plain ledger.
 Everything runs against the **PayPal sandbox**. No real money moves.
 
 **Try it without installing anything:** https://said-and-done-ten.vercel.app (sandbox buyer credentials for judges are in the Devpost testing instructions; the "Try this sentence" button reaches the QR screen without a microphone).
-Source: https://github.com/millerandmuller/said-and-done, MIT, 17 commits during the event, 113 tests.
+Source: https://github.com/millerandmuller/said-and-done, MIT, 18 commits during the event, 113 tests.
 
-**Who it is for:** the person behind a market or craft-fair table, hands full of jars or candles, who takes cash or a payment app today and wants to say the sale out loud and keep the day's books without typing. Market size: count not sourced.
+**Who it is for:** the person behind a market or craft-fair table, hands full of jars or candles, who takes cash or a payment app today and wants to say the sale out loud and keep the day's books without typing. Market size: [USDA's National Farmers Market Directory listed 8,771 markets in its last published national count (2019)](https://www.ams.usda.gov/sites/default/files/media/NationalCountofFarmersMarketDirectoryListings082019.pdf).
 
 **What is different:** Unlike PayPal Zettle or Square POS, which are built around a card reader and a catalog you set up by tapping, Said & Done takes the sale by voice, prices every line in code, not in the model, and keeps the books in the same place.
 
