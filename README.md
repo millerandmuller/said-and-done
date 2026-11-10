@@ -9,8 +9,8 @@ new catalog items by voice, and a spoken end-of-day summary with a plain ledger.
 
 Everything runs against the **PayPal sandbox**. No real money moves.
 
-**Try it without installing anything:** https://said-and-done-ten.vercel.app (sandbox buyer credentials for judges are in the Devpost testing instructions; the "Try this sentence" button reaches the QR screen without a microphone).
-Source: https://github.com/millerandmuller/said-and-done, MIT, 18 commits during the event, 113 tests.
+**Try it without installing anything:** https://said-and-done-ten.vercel.app (sandbox buyer credentials for judges are in the Devpost testing instructions; four typed sample buttons on the listening screen reach the QR screen, cash, pay later and the day summary without a microphone).
+Source: https://github.com/millerandmuller/said-and-done, MIT, 19 commits during the event, 148 tests.
 
 **Who it is for:** the person behind a market or craft-fair table, hands full of jars or candles, who takes cash or a payment app today and wants to say the sale out loud and keep the day's books without typing. Market size: [USDA's National Farmers Market Directory listed 8,771 markets in its last published national count (2019)](https://www.ams.usda.gov/sites/default/files/media/NationalCountofFarmersMarketDirectoryListings082019.pdf).
 
@@ -48,6 +48,10 @@ Environment (`.env.example`): PayPal sandbox `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT
 
 ### Try it
 
+No microphone? The listening screen has four typed sample buttons, each feeding the same path as speech: **Try this sentence**
+(the PayPal QR), **Cash** ("three small candles, cash"), **Pay later** (a draft for Anna, who then shows under Owes) and
+**The day** ("how did today go"). The sale samples create real sandbox invoices.
+
 1. Say: "two jars of honey and the big candle, she pays by PayPal". The chips appear and the counter reads them back.
 2. Say "yes". A QR fills the screen.
 3. Scan it with a phone and pay as the sandbox buyer (below). The seller screen turns green.
@@ -70,7 +74,9 @@ Log in at https://www.sandbox.paypal.com/ on the phone that scans the QR.
   invoices (`npm run seed`) with an external payment recorded. They are labelled "Curated history" in the ledger.
   Every sale made live in the demo is a real sandbox payment.
 - **Test invoices:** the sandbox account also holds invoices created while the app was being tested and reviewed. Nothing is
-  hidden: the books open on Today, and "All days" shows every invoice.
+  hidden: the books open on Today, and "All days" shows every invoice. On a day with no paid sale the books open on the
+  last market day instead, with a line saying so ("Nothing sold yet today. Showing Sat 7 Nov, the last market day."); tapping
+  Today still shows the empty day.
 - Sandbox only. No production credentials anywhere.
 - No webhooks: payment status is polled.
 

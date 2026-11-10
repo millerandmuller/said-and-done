@@ -6,7 +6,6 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { playChime, unlockAudio } from "@/lib/chime";
 import { draftOf, initialState, reducer } from "@/lib/counter-machine";
 import { owing } from "@/lib/day";
-import { SAMPLE_SENTENCE } from "@/lib/sample";
 import { buildSale, confirmationSentence, setQuantity, spokenAmount } from "@/lib/sale-math";
 import type { CheckoutResult } from "@/lib/checkout";
 import type { TurnResult } from "@/lib/turn";
@@ -54,8 +53,10 @@ export function Counter({ sellerName }: { sellerName: string }) {
   const runTurn = useCallback(async (text: string) => {
     if (busyRef.current) return;
     busyRef.current = true;
-    dispatch({ type: "thinking" });
     const pending = pendingPrice.current;
+    // Clock for "said → done": starts at the sentence that opens a sale, not at a correction or a price answer.
+    if (!stateRef.current.sale && !pending) dispatch({ type: "said", at: Date.now() });
+    dispatch({ type: "thinking" });
     pendingPrice.current = null;
     const utterance = pending ? `${pending.original}. The ${pending.name} costs ${text}.` : text;
     try {
@@ -205,7 +206,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
         dispatch({ type: "status", status: json.status });
         const sale = stateRef.current.awaiting?.sale;
         if ((json.status === "PAID" || json.status === "MARKED_AS_PAID") && sale) {
-          dispatch({ type: "paid", total: sale.total, currency: sale.currency });
+          dispatch({ type: "paid", total: sale.total, currency: sale.currency, at: json.status === "PAID" ? Date.now() : undefined }); // a cash settlement (MARKED_AS_PAID) has no buyer login, so no timing row
           playChime();
           void speakRef.current(`Paid. ${spokenAmount(sale.total, sale.currency)}.`);
         } else if (json.status === "CANCELLED") {
@@ -281,7 +282,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
       {phase === "awaiting_payment" && state.awaiting && (
         <QrScreen awaiting={state.awaiting} offline={offline} notice={state.message} onCash={recordCash} onLater={keepForLater} onCancel={cancelInvoice} />
       )}
-      {phase === "paid" && state.lastPaid && <PaidScreen {...state.lastPaid} proof={state.lastTrace} />}
+      {phase === "paid" && state.lastPaid && <PaidScreen {...state.lastPaid} proof={state.lastTrace} saidAt={state.saidAt} doneAt={state.doneAt} />}
       {phase === "cash" && state.lastPaid && <CashScreen {...state.lastPaid} />}
       {phase === "later" && <LaterScreen message={state.message} />}
 
@@ -293,7 +294,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
         <ConfirmStage sale={state.sale} focusSku={state.focusSku} message={state.message} busy={busy}
           onFocus={(sku) => dispatch({ type: "focus", sku })} onAdjust={adjust} onYes={confirm} onNo={() => dispatch({ type: "reject" })} />
       ) : (
-        <ListeningStage transcript={state.transcript} message={state.message} thinking={phase === "thinking"} live={speech.listening} onTry={() => { pendingPrice.current = null; heardRef.current(SAMPLE_SENTENCE); }} />
+        <ListeningStage transcript={state.transcript} message={state.message} thinking={phase === "thinking"} live={speech.listening} onTry={(sentence) => { pendingPrice.current = null; heardRef.current(sentence); }} />
       )}
 
       {!speech.supported && phase !== "off" && (

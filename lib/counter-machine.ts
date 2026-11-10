@@ -25,6 +25,9 @@ export type CounterState = {
   message: string; // the line the counter just said / shows (error voice included)
   lastPaid?: { total: number; currency: string };
   lastTrace?: { invoice_id: string; trace: TraceStep[] }; // the proof card on the PAID screen
+  // Read-only observations for the "said → done" row (epoch ms): the sale sentence arrived / the first poll that returned PAID.
+  saidAt?: number;
+  doneAt?: number;
 };
 
 export const initialState: CounterState = { phase: "off", transcript: "", sale: null, awaiting: null, message: "" };
@@ -32,6 +35,7 @@ export const initialState: CounterState = { phase: "off", transcript: "", sale: 
 export type Action =
   | { type: "start" }
   | { type: "heard"; text: string }
+  | { type: "said"; at: number } // the final transcript of a new sale sentence (or the click on a typed sample)
   | { type: "thinking" }
   | { type: "sale_ready"; sale: Sale; speak: string }
   | { type: "say"; message: string } // non-sale reply (summary, plan, error): back to listening with a caption
@@ -40,7 +44,7 @@ export type Action =
   | { type: "creating" }
   | { type: "invoice_ready"; awaiting: Awaiting }
   | { type: "status"; status: InvoiceStatus | "MARKED_AS_PAID" }
-  | { type: "paid"; total: number; currency: string }
+  | { type: "paid"; total: number; currency: string; at?: number }
   | { type: "cash"; total: number; currency: string }
   | { type: "later"; message: string }
   | { type: "ignore" } // chatter: leave "thinking" without changing the message
@@ -52,6 +56,8 @@ export function reducer(state: CounterState, action: Action): CounterState {
       return { ...state, phase: "listening", message: "Listening." };
     case "heard":
       return { ...state, transcript: action.text };
+    case "said":
+      return { ...state, saidAt: action.at, doneAt: undefined };
     case "thinking":
       return { ...state, phase: "thinking" };
     case "sale_ready":
@@ -69,7 +75,7 @@ export function reducer(state: CounterState, action: Action): CounterState {
     case "focus":
       return { ...state, focusSku: action.sku };
     case "reject":
-      return { ...state, phase: "listening", sale: null, focusSku: undefined, message: "Listening.", transcript: "" };
+      return { ...state, phase: "listening", sale: null, focusSku: undefined, message: "Listening.", transcript: "", saidAt: undefined, doneAt: undefined };
     case "creating":
       return { ...state, phase: "creating", message: "Making the invoice." };
     case "invoice_ready":
@@ -82,6 +88,7 @@ export function reducer(state: CounterState, action: Action): CounterState {
         phase: "paid",
         lastPaid: { total: action.total, currency: action.currency },
         lastTrace: state.awaiting ? { invoice_id: state.awaiting.invoice_id, trace: state.awaiting.trace } : undefined,
+        doneAt: state.doneAt ?? action.at, // first PAID poll wins
         message: "Paid.",
       };
     case "cash":

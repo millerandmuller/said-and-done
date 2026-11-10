@@ -39,6 +39,10 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .hint-btn span { font-weight: 600; color: var(--ink); }
 .hint-btn em { font-style: normal; }
 .hint-btn:hover { border-color: var(--ink-soft); }
+.samples { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 96vw; }
+.sample-caption { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.sample-row .hint-btn { font-size: 14px; padding: 10px 16px; white-space: nowrap; }
+.sample-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; } /* one row from 1201 px if it fits, wraps below the mic otherwise */
 
 .chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 560px; }
 .chip { background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 14px 18px; min-height: 64px; font-size: 20px; display: flex; gap: 10px; align-items: center; }
@@ -104,6 +108,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .proof-card .ok { color: #b7f0cf; margin-right: 8px; }
 .proof-card .ms { opacity: .8; }
 .proof-card .flip { margin: 0; font-size: 14px; opacity: .8; word-break: break-all; }
+.proof-card .flip.timing { margin-top: 8px; font-size: clamp(11px, .93vw, 15px); white-space: nowrap; word-break: normal; opacity: 1; } /* slightly smaller than the rows above so "said → done 1 min 38 s (buyer login included)" fits from 1201 px up */
 .proof-card .flip.big { font-size: 26px; font-weight: 700; opacity: 1; margin-top: 4px; }
 .proof-card { display: none; } /* the card would touch the QR in narrow windows; shown only from 1201 px, the exact complement of the small log */
 @media (min-width: 1201px) { .proof-card { display: block; } }
@@ -121,3 +126,5 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .day-filter { display: flex; gap: 6px; margin-top: 12px; }
 .day-filter button { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 15px; }
 .day-filter button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.day-fallback { margin-top: 10px; font-size: 15px; color: var(--ink-soft); }
+@media (max-width: 640px) { .sample-row .hint-btn { white-space: normal; } }

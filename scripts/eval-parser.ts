@@ -1,6 +1,7 @@
 // Acceptance: 8 of 10 scripted utterances parsed correctly on the first try (brief F1).
 // Usage: npx tsx scripts/eval-parser.ts
 import { DEFAULT_CATALOG } from "../data/default-catalog";
+import { SAMPLE_CASH, SAMPLE_LATER, SAMPLE_SUMMARY } from "../lib/sample";
 import { priceLines, totalOf } from "../lib/sale-math";
 import { understand } from "../lib/understand";
 import type { SaleItem } from "../lib/types";
@@ -13,6 +14,9 @@ const CASES: Case[] = [
   { say: "two jars of honey and the big candle, she pays by PayPal", expectTotal: 22, expectMode: "paypal_qr" },
   { say: "three small candles and a lip balm cash", expectTotal: 13, expectMode: "cash" },
   { say: "one gift box and two teas she pays later her email is anna at example dot com", expectTotal: 27, expectMode: "paypal_later", expectEmail: "anna@example.com" },
+  { say: SAMPLE_CASH, expectTotal: 9, expectMode: "cash" },
+  { say: SAMPLE_LATER, expectTotal: 15, expectMode: "paypal_later", expectEmail: "sb-otb43o53811890@personal.example.com" },
+  { say: SAMPLE_SUMMARY, expectIntent: "day_summary" },
   { say: "no three", draft: honey2, expectTotal: 30 },
   { say: "make that one honey", draft: honey2, expectTotal: 14 },
   { say: "and a jam", draft: honey2, expectTotal: 29 },

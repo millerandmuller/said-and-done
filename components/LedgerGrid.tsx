@@ -3,7 +3,7 @@
 import { AllCommunityModule, ModuleRegistry, type ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useState } from "react";
-import { byItem, byMethod, dayLabel, filterByDay, methodLabel, statusLabel, toLines, totalOfRows, type DayFilter, type LineRow, type RollupRow } from "@/lib/ledger-view";
+import { booksView, byItem, byMethod, dayLabel, methodLabel, statusLabel, toLines, totalOfRows, type DayFilter, type LineRow, type RollupRow } from "@/lib/ledger-view";
 import { formatMoney } from "@/lib/format";
 import type { LedgerRow } from "@/lib/types";
 
@@ -34,7 +34,7 @@ const lineCols: ColDef<LineRow>[] = [
 export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
   const [rows, setRows] = useState<LedgerRow[] | null>(null);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<DayFilter>("today");
+  const [picked, setPicked] = useState<DayFilter | null>(null); // null until the seller taps a filter
 
   useEffect(() => {
     let live = true;
@@ -53,9 +53,9 @@ export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
     return () => { live = false; clearInterval(id); };
   }, []);
 
-  const shown = useMemo(() => (rows ? filterByDay(rows, filter, tz, new Date().toISOString()) : []), [rows, filter, tz]);
-  const lines = useMemo(() => toLines(shown, tz, fx), [shown, tz, fx]);
-  const total = totalOfRows(shown, fx);
+  const view = useMemo(() => (rows ? booksView(rows, picked, tz, new Date().toISOString()) : null), [rows, picked, tz]);
+  const lines = useMemo(() => toLines(view?.rows ?? [], tz, fx), [view, tz, fx]);
+  const total = totalOfRows(view?.rows ?? [], fx);
 
   return (
     <main className="books">
@@ -65,11 +65,12 @@ export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
         <p>{rows ? `${new Set(lines.map((l) => l.invoice_id)).size} paid sales · ${formatMoney(total, "USD")}` : error || "Reading PayPal."}</p>
         <div className="day-filter" role="group" aria-label="Which days">
           {(["today", "last_saturday", "all"] as const).map((f) => (
-            <button key={f} className={filter === f ? "on" : ""} aria-pressed={filter === f} onClick={() => setFilter(f)}>
+            <button key={f} className={view?.active === f ? "on" : ""} aria-pressed={view?.active === f} onClick={() => setPicked(f)}>
               {f === "today" ? "Today" : f === "last_saturday" ? "Last Saturday" : "All days"}
             </button>
           ))}
         </div>
+        {view?.label && <p className="day-fallback" role="status">{view.label}</p>}
       </header>
       <section className="books-rollups">
         <div className="grid-small"><AgGridReact<RollupRow> rowData={byItem(lines)} columnDefs={rollupCols("By item")} domLayout="autoHeight" loading={!rows} overlayNoRowsTemplate="No paid sales for these days." /></div>

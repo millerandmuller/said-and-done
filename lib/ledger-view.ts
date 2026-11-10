@@ -1,6 +1,6 @@
 // Shapes ledger rows for the AG Grid tables. Row grouping is an AG Grid Enterprise feature (brief: Community only),
 // so the by-item and by-method roll-ups are computed here and shown as their own small grids.
-import { dayKey, isPaid, lastSaturdayKey, toDollars } from "./day";
+import { dayKey, isPaid, lastMarketDayKey, lastSaturdayKey, toDollars } from "./day";
 import { OWING_STATES } from "./statuses";
 import type { LedgerRow } from "./types";
 
@@ -68,4 +68,24 @@ export function filterByDay(rows: LedgerRow[], filter: DayFilter, tz: string, no
   if (filter === "all") return rows;
   const want = filter === "today" ? dayKey(nowIso, tz) : lastSaturdayKey(nowIso, tz);
   return rows.filter((r) => dayKey(r.time, tz) === want);
+}
+
+export type BooksView = { rows: LedgerRow[]; active: DayFilter | null; label?: string };
+
+/**
+ * What the books show. `picked` is the seller's own tap (null = never tapped).
+ * Untouched and no paid sale today: open on the last market day with one label line, nothing hidden or renamed.
+ * Tapping "Today" (picked = "today") always shows today honestly, even when empty.
+ */
+export function booksView(rows: LedgerRow[], picked: DayFilter | null, tz: string, nowIso: string): BooksView {
+  if (picked) return { rows: filterByDay(rows, picked, tz, nowIso), active: picked };
+  const today = filterByDay(rows, "today", tz, nowIso);
+  if (today.some(isPaid)) return { rows: today, active: "today" };
+  const fallback = lastMarketDayKey(rows, nowIso, tz);
+  if (!fallback) return { rows: today, active: "today" };
+  return {
+    rows: rows.filter((r) => dayKey(r.time, tz) === fallback),
+    active: null,
+    label: `Nothing sold yet today. Showing ${dayLabel(fallback)}, the last market day.`,
+  };
 }

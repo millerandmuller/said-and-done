@@ -1,7 +1,7 @@
 // Presentational screens for the counter. No fetching and no speech in here: props in, markup out.
 import type { Awaiting, TraceStep } from "@/lib/counter-machine";
-import { formatMoney } from "@/lib/format";
-import { SAMPLE_SENTENCE } from "@/lib/sample";
+import { formatMoney, saidToDoneRow } from "@/lib/format";
+import { SAMPLES, SAMPLES_CAPTION } from "@/lib/sample";
 import type { LedgerRow, Sale } from "@/lib/types";
 
 const MicIcon = () => (
@@ -18,16 +18,23 @@ export function StartScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-export function ListeningStage({ transcript, message, thinking, live, onTry }: { transcript: string; message: string; thinking: boolean; live: boolean; onTry: () => void }) {
+export function ListeningStage({ transcript, message, thinking, live, onTry }: { transcript: string; message: string; thinking: boolean; live: boolean; onTry: (sentence: string) => void }) {
   return (
     <div className="stage">
       <div className={`mic ${live && !thinking ? "live" : ""}`} aria-hidden="true"><MicIcon /></div>
       <p className="line">{thinking ? "One moment." : message || "Listening."}</p>
       <p className="sub" aria-live="polite">{transcript ? `“${transcript}”` : ""}</p>
       {!thinking && (
-        <button className="hint-btn" onClick={onTry}>
-          <span>Try this sentence</span> <em>“{SAMPLE_SENTENCE}”</em>
-        </button>
+        <div className="samples">
+          <p className="sample-caption">{SAMPLES_CAPTION}</p>
+          <div className="sample-row">
+            {SAMPLES.map((x) => (
+              <button key={x.id} className="hint-btn" title={x.sentence} onClick={() => onTry(x.sentence)}>
+                <span>{x.label}</span>{x.shown && <> <em>“{x.shown}”</em></>}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -103,7 +110,7 @@ export function ProofTrace({ awaiting }: { awaiting: Awaiting }) {
 }
 
 // The readable proof card (legible in a 1080p recording, unlike the small log): tool names, timings, invoice status change.
-export function ProofCard({ invoiceId, trace, from, to }: { invoiceId: string; trace: TraceStep[]; from: string; to: string }) {
+export function ProofCard({ invoiceId, trace, from, to, timing }: { invoiceId: string; trace: TraceStep[]; from: string; to: string; timing?: string | null }) {
   const changed = to !== from;
   return (
     <aside className="proof-card" aria-label="PayPal Agent Toolkit proof">
@@ -116,16 +123,17 @@ export function ProofCard({ invoiceId, trace, from, to }: { invoiceId: string; t
       </ul>
       <p className="flip">{invoiceId}</p>
       <p className="flip big">{changed ? `${from} → ${to}` : `${from} · waiting`}</p>
+      {timing && <p className="flip timing">{timing}</p>}
     </aside>
   );
 }
 
-export function PaidScreen({ total, currency, proof }: { total: number; currency: string; proof?: { invoice_id: string; trace: TraceStep[] } }) {
+export function PaidScreen({ total, currency, proof, saidAt, doneAt }: { total: number; currency: string; proof?: { invoice_id: string; trace: TraceStep[] }; saidAt?: number; doneAt?: number }) {
   return (
     <div className="full paid" role="status">
       <p className="total">{formatMoney(total, currency)}</p>
       <p className="line" style={{ color: "#fff" }}>Paid.</p>
-      {proof && <ProofCard invoiceId={proof.invoice_id} trace={proof.trace} from="UNPAID" to="PAID" />}
+      {proof && <ProofCard invoiceId={proof.invoice_id} trace={proof.trace} from="UNPAID" to="PAID" timing={saidToDoneRow(saidAt, doneAt)} />}
     </div>
   );
 }

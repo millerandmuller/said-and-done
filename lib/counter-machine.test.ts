@@ -52,3 +52,34 @@ describe("ignore: bystander chatter", () => {
     expect(after.message).toBe("Listening.");
   });
 });
+
+describe("said -> done stamps", () => {
+  const awaiting = { invoice_id: "INV-1", payer_url: "u", status: "UNPAID" as const, sale, trace: [] };
+  const toQr = [{ type: "start" }, { type: "said", at: 1000 }, { type: "thinking" }, { type: "sale_ready", sale, speak: "Yes?" }, { type: "creating" }, { type: "invoice_ready", awaiting }] as Action[];
+
+  it("saidAt is set by the sale sentence, doneAt by the first PAID poll", () => {
+    let s = run(toQr);
+    expect(s.saidAt).toBe(1000);
+    expect(s.doneAt).toBeUndefined();
+    s = run([{ type: "paid", total: 22, currency: "USD", at: 42000 }], s);
+    expect(s).toMatchObject({ saidAt: 1000, doneAt: 42000 });
+  });
+  it("a repeated paid action never moves doneAt", () => {
+    const s = run([{ type: "paid", total: 22, currency: "USD", at: 42000 }, { type: "paid", total: 22, currency: "USD", at: 99000 }], run(toQr));
+    expect(s.doneAt).toBe(42000);
+  });
+  it("a correction does not restart the clock (sale_ready leaves saidAt alone)", () => {
+    const s = run([{ type: "sale_ready", sale: { ...sale, total: 24 }, speak: "Yes?" }], run([{ type: "start" }, { type: "said", at: 1000 }, { type: "sale_ready", sale, speak: "Yes?" }]));
+    expect(s.saidAt).toBe(1000);
+  });
+  it("both are cleared with the sale: reject and done", () => {
+    const stamped = run([{ type: "paid", total: 22, currency: "USD", at: 42000 }], run(toQr));
+    for (const s of [run([{ type: "done" }], stamped), run([{ type: "reject" }], run(toQr))]) {
+      expect(s.saidAt).toBeUndefined();
+      expect(s.doneAt).toBeUndefined();
+    }
+  });
+  it("a new sentence restarts the clock and clears an old doneAt", () => {
+    expect(run([{ type: "said", at: 5000 }], { ...initialState, saidAt: 1000, doneAt: 2000 })).toMatchObject({ saidAt: 5000 });
+  });
+});

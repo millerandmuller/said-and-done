@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CATALOG } from "../data/default-catalog";
 
 // Bystander chatter must produce no spoken reply at all: the server returns "ignored".
@@ -9,6 +9,7 @@ vi.mock("./config", () => ({ getConfig: () => ({ defaultCurrency: "USD", demoFxU
 vi.mock("./ledger", () => ({ fetchLedger: vi.fn() }));
 vi.mock("./invoices", () => ({ sendReminder: vi.fn() }));
 
+import { fetchLedger } from "./ledger";
 import { interpretTurn } from "./turn";
 
 const CHATTER = ["okay cool good just one second please", "hold on let me see", "yeah thanks, I'll be right with you"];
@@ -47,5 +48,43 @@ describe("interpretTurn: chatter is ignored silently", () => {
     expect((await interpretTurn("I sell soap for a tenth of a cent", null)).kind).toBe("unknown");
     understand.mockResolvedValue({ intent: "add_catalog_item", items: [], new_item: { name: "Soap", price: 0.333, aliases: [] }, payment_mode: null, currency: null });
     expect((await interpretTurn("I sell soap", null)).kind).toBe("unknown");
+  });
+});
+
+describe("interpretTurn: empty today falls back to the last market day (same day the Books page opens on)", () => {
+  const paid = (id: string, time: string, over: Record<string, unknown> = {}) => ({ invoice_id: id, time, items: [{ name: "Honey 500 g", qty: 2, unit_price: 8 }], total: 16, currency: "USD", method: "PAYPAL", status: "PAID", ...over });
+  const history = [paid("a", "2026-11-07T20:00:00Z"), paid("b", "2026-11-07T21:00:00Z", { method: "CASH", status: "MARKED_AS_PAID" }), paid("c", "2026-10-31T20:00:00Z", { items: [{ name: "Soap", qty: 3, unit_price: 5 }], total: 15 })];
+
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-11-10T18:00:00Z")); understand.mockReset(); });
+  afterEach(() => vi.useRealTimers());
+
+  it("the day summary speaks the fallback day", async () => {
+    understand.mockResolvedValue({ intent: "day_summary", items: [], payment_mode: null, currency: null });
+    vi.mocked(fetchLedger).mockResolvedValue(history as never);
+    const r = await interpretTurn("how did today go", null);
+    expect(r).toMatchObject({ kind: "summary" });
+    expect((r as { speak: string }).speak).toMatch(/^Nothing sold yet today\. Last market day, Saturday 7 November: 2 sales, thirty-two dollars, 1 in cash\./);
+  });
+  it("with sales today the summary is the plain Today sentence", async () => {
+    understand.mockResolvedValue({ intent: "day_summary", items: [], payment_mode: null, currency: null });
+    vi.mocked(fetchLedger).mockResolvedValue([...history, paid("t", "2026-11-10T17:00:00Z")] as never);
+    expect(((await interpretTurn("how did today go", null)) as { speak: string }).speak).toMatch(/^Today: 1 sale, sixteen dollars/);
+  });
+  it("no history at all keeps the old answer", async () => {
+    understand.mockResolvedValue({ intent: "day_summary", items: [], payment_mode: null, currency: null });
+    vi.mocked(fetchLedger).mockResolvedValue([] as never);
+    expect(((await interpretTurn("how did today go", null)) as { speak: string }).speak).toBe("Nothing sold yet. The honey is still here.");
+  });
+  it("the plan compares the last two sale days and names both", async () => {
+    understand.mockResolvedValue({ intent: "plan_week", items: [], payment_mode: null, currency: null });
+    vi.mocked(fetchLedger).mockResolvedValue(history as never);
+    const speak = ((await interpretTurn("what should I bring next week", null)) as { speak: string }).speak;
+    expect(speak).toContain("Nothing sold yet today. Comparing Saturday 7 November with Saturday 31 October.");
+    expect(speak).toMatch(/Bring more .*honey/i);
+  });
+  it("fewer than two days of history keeps the old plan answer", async () => {
+    understand.mockResolvedValue({ intent: "plan_week", items: [], payment_mode: null, currency: null });
+    vi.mocked(fetchLedger).mockResolvedValue(history.slice(0, 2) as never);
+    expect(((await interpretTurn("what should I bring next week", null)) as { speak: string }).speak).toMatch(/^Not enough history yet to compare/);
   });
 });

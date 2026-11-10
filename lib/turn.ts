@@ -2,7 +2,7 @@
 // The browser sends the utterance plus the current draft; it gets back a typed result to render and speak.
 import { getCatalog, addCatalogItem } from "./catalog";
 import { getConfig } from "./config";
-import { dayKey, lastSaturdayKey, owing, planNextWeek, spokenPlan, spokenSummary, summarizeDay } from "./day";
+import { dayKey, lastMarketDayKey, lastSaturdayKey, lastTwoSaleDays, owing, planFromLastTwoDays, planNextWeek, spokenPlan, spokenSummary, summarizeDay } from "./day";
 import { sendReminder } from "./invoices";
 import { fetchLedger } from "./ledger";
 import { buildSale, confirmationSentence, isValidEmail, numberToWords, priceLines, spokenAmount, type DraftLine } from "./sale-math";
@@ -85,8 +85,13 @@ async function catalogTurn(newItem: U["new_item"]): Promise<TurnResult> {
 async function summaryTurn(tz: string, fx: number): Promise<TurnResult> {
   const [rows, catalog] = await Promise.all([fetchLedger({ fresh: true }), getCatalog()]);
   const shortByName = new Map(catalog.map((c) => [c.name, c.spoken?.short ?? c.name]));
-  const summary = summarizeDay(rows, dayKey(new Date().toISOString(), tz), tz, fx);
-  return { kind: "summary", speak: spokenSummary(summary, (n) => shortByName.get(n) ?? n) };
+  const now = new Date().toISOString();
+  const shortOf = (n: string) => shortByName.get(n) ?? n;
+  const today = summarizeDay(rows, dayKey(now, tz), tz, fx);
+  // Same fallback day the Books page opens on when today has no paid sale.
+  const fallbackKey = today.count === 0 ? lastMarketDayKey(rows, now, tz) : null;
+  if (fallbackKey) return { kind: "summary", speak: spokenSummary(summarizeDay(rows, fallbackKey, tz, fx), shortOf, fallbackKey) };
+  return { kind: "summary", speak: spokenSummary(today, shortOf) };
 }
 
 async function planTurn(tz: string, fx: number): Promise<TurnResult> {
@@ -94,6 +99,15 @@ async function planTurn(tz: string, fx: number): Promise<TurnResult> {
   const labelByName = new Map(catalog.map((c) => [c.name, (c.spoken?.short ?? c.name).toLowerCase()]));
   const now = new Date().toISOString();
   const today = summarizeDay(rows, dayKey(now, tz), tz, fx);
+  if (today.count === 0) {
+    const [latest, earlier] = lastTwoSaleDays(rows, now, tz);
+    if (latest && earlier) {
+      const label = (n: string) => labelByName.get(n) ?? n.toLowerCase();
+      return { kind: "plan", speak: planFromLastTwoDays({ key: latest, summary: summarizeDay(rows, latest, tz, fx) }, { key: earlier, summary: summarizeDay(rows, earlier, tz, fx) }, label) };
+    }
+    // Empty today and fewer than two sale days: nothing honest to compare ("0 today against 4" would read as a bad day).
+    return { kind: "plan", speak: spokenPlan([]) };
+  }
   const last = summarizeDay(rows, lastSaturdayKey(now, tz), tz, fx);
   return { kind: "plan", speak: spokenPlan(planNextWeek(today, last, (n) => labelByName.get(n) ?? n.toLowerCase()), last.curatedCount > 0) };
 }

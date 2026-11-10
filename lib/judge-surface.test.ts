@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SAMPLE_SENTENCE } from "./sample";
+import { SAMPLES, SAMPLES_CAPTION, SAMPLE_CASH, SAMPLE_LATER, SAMPLE_SENTENCE, SAMPLE_SUMMARY } from "./sample";
 
 const root = process.cwd();
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
@@ -33,8 +33,28 @@ describe("one log on the QR and PAID screens", () => {
   });
 });
 
-describe("Try this sentence", () => {
+describe("Try this sentence and the three other samples", () => {
   it("offers the hero sentence", () => {
     expect(SAMPLE_SENTENCE).toBe("two jars of honey and the big candle, she pays by PayPal");
+  });
+  it("offers cash, pay later (known name and the seeded buyer email) and the day summary", () => {
+    expect(SAMPLE_CASH).toBe("three small candles, cash");
+    expect(SAMPLE_LATER).toBe("one gift box, she pays later, her name is Anna and her email is sb-otb43o53811890@personal.example.com");
+    expect(SAMPLE_SUMMARY).toBe("how did today go");
+  });
+  it("lists exactly four buttons in order, each sending its own full sentence", () => {
+    expect(SAMPLES.map((x) => x.sentence)).toEqual([SAMPLE_SENTENCE, SAMPLE_CASH, SAMPLE_LATER, SAMPLE_SUMMARY]);
+    expect(new Set(SAMPLES.map((x) => x.id)).size).toBe(4);
+  });
+  it("shows the full sentence on the pill, or nothing (label only) for the long pay-later one", () => {
+    for (const x of SAMPLES) expect(x.shown === x.sentence || x.shown === "").toBe(true);
+  });
+  it("labels the row for judges without a microphone and does not claim the day summary makes an invoice", () => {
+    expect(SAMPLES_CAPTION).toBe("Typed samples for judges without a microphone. The sale samples create real sandbox invoices.");
+  });
+  it("README names all four sample buttons and the seed script uses the same buyer", () => {
+    const readme = read("README.md");
+    for (const label of ["Try this sentence", "Cash", "Pay later", "The day"]) expect(readme).toContain(`**${label}**`);
+    expect(readme).toContain("sb-otb43o53811890@personal.example.com");
   });
 });

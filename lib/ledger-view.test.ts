@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byItem, byMethod, dayLabel, filterByDay, methodLabel, statusLabel, toLines, totalOfRows } from "./ledger-view";
+import { booksView, byItem, byMethod, dayLabel, filterByDay, methodLabel, statusLabel, toLines, totalOfRows } from "./ledger-view";
 import type { LedgerRow } from "./types";
 
 const rows: LedgerRow[] = [
@@ -50,4 +50,38 @@ describe("filterByDay", () => {
   it("today", () => expect(filterByDay(all, "today", "America/Los_Angeles", now).map((r) => r.invoice_id)).toEqual(["mon1", "mon2"]));
   it("last Saturday", () => expect(filterByDay(all, "last_saturday", "America/Los_Angeles", now).map((r) => r.invoice_id)).toEqual(["sat"]));
   it("all days keeps every row, nothing is hidden", () => expect(filterByDay(all, "all", "America/Los_Angeles", now)).toHaveLength(4));
+});
+
+describe("booksView", () => {
+  const TZ = "America/Los_Angeles";
+  const mk = (id: string, time: string, status: LedgerRow["status"] = "PAID"): LedgerRow => ({ invoice_id: id, time, items: [], total: 1, currency: "USD", method: "PAYPAL", status });
+  const history = [mk("sat", "2026-11-07T20:00:00Z"), mk("sat2", "2026-11-07T21:00:00Z"), mk("old", "2026-10-31T20:00:00Z"), mk("unpaid", "2026-11-09T20:00:00Z", "UNPAID")];
+  const TUE = "2026-11-10T18:00:00Z";
+
+  it("(a) today has a paid sale: no fallback, no label", () => {
+    const v = booksView([...history, mk("now", "2026-11-10T17:00:00Z")], null, TZ, TUE);
+    expect(v.active).toBe("today");
+    expect(v.label).toBeUndefined();
+    expect(v.rows.map((r) => r.invoice_id)).toEqual(["now"]);
+  });
+  it("(b) today empty, history present: opens on the most recent sale day and names it", () => {
+    const v = booksView(history, null, TZ, TUE);
+    expect(v.rows.map((r) => r.invoice_id)).toEqual(["sat", "sat2"]);
+    expect(v.active).toBeNull();
+    expect(v.label).toBe("Nothing sold yet today. Showing Sat 7 Nov, the last market day.");
+  });
+  it("(b) tapping Today shows the honest empty state", () => {
+    const v = booksView(history, "today", TZ, TUE);
+    expect(v.rows).toEqual([]);
+    expect(v.label).toBeUndefined();
+  });
+  it("(b) Last Saturday and All days are unchanged", () => {
+    expect(booksView(history, "all", TZ, TUE).rows).toHaveLength(4);
+    expect(booksView(history, "last_saturday", TZ, TUE).rows.map((r) => r.invoice_id)).toEqual(["sat", "sat2"]);
+  });
+  it("(c) no history at all: an empty Today, no label", () => {
+    const v = booksView([], null, TZ, TUE);
+    expect(v).toEqual({ rows: [], active: "today" });
+  });
+  it("an unpaid-only today does not count as a sale", () => expect(booksView(history, null, TZ, TUE).rows.some((r) => r.invoice_id === "unpaid")).toBe(false));
 });
