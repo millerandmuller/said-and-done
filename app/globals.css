@@ -30,7 +30,11 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .mic svg { width: 64px; height: 64px; fill: var(--paper); }
 .mic.live::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 3px solid var(--honey); opacity: 0; animation: pulse 1.8s ease-out infinite; }
 @keyframes pulse { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(1.25); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .mic.live::after { animation: none; opacity: .5; } }
+/* Idle breathing: only the start button is a <button class="mic"> (the listening mic is a div), and that screen unmounts the moment
+   the counter leaves idle, so the animation stops with it. Frame 0 equals the static look; slower and smaller than the 1.8 s pulse. */
+button.mic { animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scale(1); box-shadow: 0 6px 24px rgba(201,138,27,.35); } 50% { transform: scale(1.04); box-shadow: 0 6px 30px rgba(201,138,27,.26); } }
+@media (prefers-reduced-motion: reduce) { .mic.live::after { animation: none; opacity: .5; } button.mic { animation: none; } }
 
 .line { font-family: var(--serif); font-size: clamp(26px, 6vw, 40px); line-height: 1.2; margin: 0; max-width: 22ch; }
 .sub { color: var(--ink-soft); font-size: 18px; min-height: 1.5em; margin: 0; max-width: 34ch; }
