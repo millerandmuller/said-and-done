@@ -1,6 +1,7 @@
 // The seller screen's state machine (brief section 4): idle -> listening -> confirming -> awaiting payment -> paid | cash | later.
 // Pure reducer so every transition is unit-testable; side effects (speech, fetch) live in components/Counter.tsx.
 import type { Draft } from "./turn";
+import type { ChatterPhase } from "./transcript";
 import type { InvoiceStatus, Sale } from "./types";
 
 export type Phase = "off" | "listening" | "thinking" | "confirming" | "creating" | "awaiting_payment" | "paid" | "cash" | "later";
@@ -19,6 +20,7 @@ export type TraceStep = { tool: string; ms?: number; note?: string };
 export type CounterState = {
   phase: Phase;
   transcript: string; // last thing heard, shown live
+  chatter?: ChatterPhase; // set when the server classed the last utterance as bystander chatter; cleared by the next thing heard
   sale: Sale | null; // the draft being confirmed
   focusSku?: string;
   awaiting: Awaiting | null;
@@ -48,6 +50,7 @@ export type Action =
   | { type: "cash"; total: number; currency: string }
   | { type: "later"; message: string }
   | { type: "ignore" } // chatter: leave "thinking" without changing the message
+  | { type: "fade" } // the quiet period after chatter passed: hide the faint transcript
   | { type: "done" }; // leave a terminal screen, back to listening
 
 export function reducer(state: CounterState, action: Action): CounterState {
@@ -55,27 +58,29 @@ export function reducer(state: CounterState, action: Action): CounterState {
     case "start":
       return { ...state, phase: "listening", message: "Listening." };
     case "heard":
-      return { ...state, transcript: action.text };
+      return { ...state, transcript: action.text, chatter: undefined }; // anything new heard brings the plate back and cancels a pending fade
     case "said":
       return { ...state, saidAt: action.at, doneAt: undefined };
     case "thinking":
       return { ...state, phase: "thinking" };
     case "sale_ready":
-      return { ...state, phase: "confirming", sale: action.sale, message: action.speak, focusSku: keepFocus(state.focusSku, action.sale) };
+      return { ...state, phase: "confirming", sale: action.sale, message: action.speak, chatter: undefined, focusSku: keepFocus(state.focusSku, action.sale) };
     case "say": {
       // A reply that is not a sale (summary, plan, error): leave "thinking"/"creating", keep any draft on screen.
       const busy = state.phase === "thinking" || state.phase === "creating";
       const phase = busy ? (state.sale ? "confirming" : "listening") : state.phase;
-      return { ...state, phase, message: action.message };
+      return { ...state, phase, message: action.message, chatter: undefined };
     }
     case "ignore": {
       if (state.phase !== "thinking") return state;
-      return { ...state, phase: state.sale ? "confirming" : "listening" };
+      return { ...state, phase: state.sale ? "confirming" : "listening", chatter: "fresh" };
     }
+    case "fade":
+      return state.chatter === "fresh" ? { ...state, chatter: "faded" } : state; // only chatter fades
     case "focus":
       return { ...state, focusSku: action.sku };
     case "reject":
-      return { ...state, phase: "listening", sale: null, focusSku: undefined, message: "Listening.", transcript: "", saidAt: undefined, doneAt: undefined };
+      return { ...state, phase: "listening", sale: null, focusSku: undefined, message: "Listening.", transcript: "", chatter: undefined, saidAt: undefined, doneAt: undefined };
     case "creating":
       return { ...state, phase: "creating", message: "Making the invoice." };
     case "invoice_ready":

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatElapsed, saidToDoneRow } from "./format";
+import { formatElapsed, paidSalesHeader, saidToDoneRow } from "./format";
+
+describe("paidSalesHeader", () => {
+  it("counts to one in the singular", () => expect(paidSalesHeader(1, 22)).toBe("1 paid sale · $22"));
+  it("uses the plural for zero and for two or more", () => {
+    expect(paidSalesHeader(0, 0)).toBe("0 paid sales · $0");
+    expect(paidSalesHeader(2, 30.5)).toBe("2 paid sales · $30.50");
+  });
+});
 
 describe("formatElapsed", () => {
   it("whole seconds under a minute", () => { expect(formatElapsed(41)).toBe("41 s"); expect(formatElapsed(0)).toBe("0 s"); expect(formatElapsed(59.4)).toBe("59 s"); });

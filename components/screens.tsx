@@ -2,6 +2,7 @@
 import type { Awaiting, TraceStep } from "@/lib/counter-machine";
 import { formatMoney, saidToDoneRow } from "@/lib/format";
 import { SAMPLES, SAMPLES_CAPTION } from "@/lib/sample";
+import { plateText, type ChatterPhase } from "@/lib/transcript";
 import type { LedgerRow, Sale } from "@/lib/types";
 
 const MicIcon = () => (
@@ -18,12 +19,15 @@ export function StartScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-export function ListeningStage({ transcript, message, thinking, live, onTry }: { transcript: string; message: string; thinking: boolean; live: boolean; onTry: (sentence: string) => void }) {
+export function ListeningStage({ transcript, chatter, message, thinking, live, onTry }: { transcript: string; chatter?: ChatterPhase; message: string; thinking: boolean; live: boolean; onTry: (sentence: string) => void }) {
   return (
     <div className="stage">
       <div className={`mic ${live && !thinking ? "live" : ""}`} aria-hidden="true"><MicIcon /></div>
       <p className="line">{thinking ? "One moment." : message || "Listening."}</p>
-      <p className="sub" aria-live="polite">{transcript ? `“${transcript}”` : ""}</p>
+      {/* Fixed-height slot: the plate changing size never moves the microphone or the sample row. */}
+      <div className="heard-slot">
+        <p className={`heard-plate ${chatter === "faded" ? "faded" : ""}`} aria-live="polite">{transcript ? `“${plateText(transcript, chatter)}”` : ""}</p>
+      </div>
       {!thinking && (
         <div className="samples">
           <p className="sample-caption">{SAMPLES_CAPTION}</p>

@@ -9,6 +9,7 @@ import { owing } from "@/lib/day";
 import { buildSale, confirmationSentence, setQuantity, spokenAmount } from "@/lib/sale-math";
 import type { CheckoutResult } from "@/lib/checkout";
 import type { TurnResult } from "@/lib/turn";
+import { fadeDelay } from "@/lib/transcript";
 import type { LedgerRow } from "@/lib/types";
 import { classify, parseQuantity } from "@/lib/voice-commands";
 import { Backdrop } from "./Backdrop";
@@ -223,6 +224,14 @@ export function Counter({ sellerName }: { sellerName: string }) {
     return () => { clearTimeout(first); clearInterval(id); };
   }, [awaitingId, state.phase]);
 
+  // Bystander chatter fades after a few quiet seconds; anything newly heard cancels the pending fade (the reducer clears `chatter`).
+  const fadeMs = fadeDelay(state.chatter);
+  useEffect(() => {
+    if (fadeMs === null) return;
+    const t = setTimeout(() => dispatch({ type: "fade" }), fadeMs);
+    return () => clearTimeout(t);
+  }, [fadeMs]);
+
   // Terminal screens return to listening on their own.
   useEffect(() => {
     if (state.phase !== "paid" && state.phase !== "cash" && state.phase !== "later") return;
@@ -294,7 +303,7 @@ export function Counter({ sellerName }: { sellerName: string }) {
         <ConfirmStage sale={state.sale} focusSku={state.focusSku} message={state.message} busy={busy}
           onFocus={(sku) => dispatch({ type: "focus", sku })} onAdjust={adjust} onYes={confirm} onNo={() => dispatch({ type: "reject" })} />
       ) : (
-        <ListeningStage transcript={state.transcript} message={state.message} thinking={phase === "thinking"} live={speech.listening} onTry={(sentence) => { pendingPrice.current = null; heardRef.current(sentence); }} />
+        <ListeningStage transcript={state.transcript} chatter={state.chatter} message={state.message} thinking={phase === "thinking"} live={speech.listening} onTry={(sentence) => { pendingPrice.current = null; heardRef.current(sentence); }} />
       )}
 
       {!speech.supported && phase !== "off" && (

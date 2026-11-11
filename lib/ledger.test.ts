@@ -19,7 +19,9 @@ describe("ledger mapping", () => {
   it("prefers a spoken name over the placeholder and the email", () => {
     expect(displayName({ email_address: "a@x.com", name: { given_name: "Anna" } })).toBe("Anna");
     expect(displayName({ email_address: "a@x.com", name: { given_name: "Customer" } })).toBe("a@x.com");
-    expect(displayName({ name: { given_name: "Customer" } })).toBe("Customer");
+    expect(displayName({ name: { given_name: "Customer" } })).toBe("Walk-in");
+    expect(displayName({ email_address: "a@x.com" })).toBe("a@x.com");
+    expect(displayName(undefined)).toBeUndefined();
   });
   it("reads the reference tag", () => {
     expect(modeFromReference("SD:later")).toBe("paypal_later");

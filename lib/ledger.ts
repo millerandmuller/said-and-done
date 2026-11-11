@@ -43,10 +43,12 @@ export function rowFromInvoice(id: string, inv: RawInvoice): LedgerRow | null {
   };
 }
 
-// Prefer the buyer's name; "Customer" is the placeholder this app sends when no name was spoken, so it falls back to the email.
+// Prefer the buyer's name; "Customer" is the placeholder this app sends when no name was spoken (lib/invoices.ts),
+// so it falls back to the email, and with no email either the books say "Walk-in" like a stall seller's own notebook.
 export function displayName(billing?: { email_address?: string; name?: { given_name?: string; full_name?: string } }): string | undefined {
   const name = billing?.name?.full_name ?? billing?.name?.given_name;
-  return name && name !== "Customer" ? name : billing?.email_address ?? name;
+  if (name === "Customer") return billing?.email_address ?? "Walk-in";
+  return name || billing?.email_address;
 }
 
 // PayPal returns payment_date as "2026-11-07" or a full timestamp; make both valid ISO.

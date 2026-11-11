@@ -4,7 +4,7 @@ import { AllCommunityModule, ModuleRegistry, type ColDef } from "ag-grid-communi
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useState } from "react";
 import { booksView, byItem, byMethod, dayLabel, methodLabel, statusLabel, toLines, totalOfRows, type DayFilter, type LineRow, type RollupRow } from "@/lib/ledger-view";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, paidSalesHeader } from "@/lib/format";
 import type { LedgerRow } from "@/lib/types";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -62,7 +62,7 @@ export function LedgerGrid({ tz, fx }: { tz: string; fx: number }) {
       <header className="books-head">
         <a href="/" className="back">← Counter</a>
         <h1>The books</h1>
-        <p>{rows ? `${new Set(lines.map((l) => l.invoice_id)).size} paid sales · ${formatMoney(total, "USD")}` : error || "Reading PayPal."}</p>
+        <p>{rows ? paidSalesHeader(new Set(lines.map((l) => l.invoice_id)).size, total) : error || "Reading PayPal."}</p>
         <div className="day-filter" role="group" aria-label="Which days">
           {(["today", "last_saturday", "all"] as const).map((f) => (
             <button key={f} className={view?.active === f ? "on" : ""} aria-pressed={view?.active === f} onClick={() => setPicked(f)}>

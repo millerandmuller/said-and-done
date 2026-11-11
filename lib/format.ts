@@ -2,6 +2,11 @@ export function formatMoney(amount: number, currency: string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: Number.isInteger(amount) ? 0 : 2 }).format(amount);
 }
 
+/** The Books header line: "1 paid sale · $22", "2 paid sales · $30". */
+export function paidSalesHeader(count: number, total: number): string {
+  return `${count} paid ${count === 1 ? "sale" : "sales"} · ${formatMoney(total, "USD")}`;
+}
+
 /** Whole seconds under a minute ("41 s"), minutes and seconds from 60 s ("1 min 38 s"). The row on the PAID card, as measured. */
 export function formatElapsed(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
